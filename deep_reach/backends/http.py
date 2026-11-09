@@ -240,6 +240,7 @@ def fetch(
     accept: str = "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8",
     data: Optional[bytes] = None,
     method: Optional[str] = None,
+    code_map: Optional[dict[int, str]] = None,
 ) -> Response:
     validate_url(url)
     request_headers = {
@@ -271,9 +272,8 @@ def fetch(
             )
     except urllib.error.HTTPError as exc:
         body = exc.read()[:300].decode("utf-8", errors="replace")
-        raise ReachError(
-            _http_code(exc.code), f"HTTP {exc.code} from {url}: {body}"
-        ) from exc
+        code = (code_map or {}).get(exc.code) or _http_code(exc.code)
+        raise ReachError(code, f"HTTP {exc.code} from {url}: {body}") from exc
     except urllib.error.URLError as exc:
         reason = str(exc.reason)
         code = TIMEOUT if "timed out" in reason.lower() else UPSTREAM_BROKEN
@@ -290,6 +290,7 @@ def fetch_json(
     params: Optional[dict] = None,
     data: Optional[bytes] = None,
     method: Optional[str] = None,
+    code_map: Optional[dict[int, str]] = None,
 ) -> Any:
     if params:
         separator = "&" if "?" in url else "?"
@@ -301,6 +302,7 @@ def fetch_json(
         accept="application/json",
         data=data,
         method=method,
+        code_map=code_map,
     )
     try:
         payload = json.loads(response.text)
