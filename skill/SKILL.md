@@ -34,7 +34,7 @@ uv run deep-reach state
 
 - `doctor` 告诉你哪些渠道可用、缺什么、下一步做什么。
 - `tiers` 显示分层定义和每个渠道的层级覆盖。
-- `channels` 默认只显示可用渠道；`roadmap` 显示未实现的。
+- `channels` 默认显示已实现渠道，`status` 是当前环境实测值；`roadmap` 显示未实现的。
 - `capabilities` 是能力契约：能拿什么、不能拿什么、走哪一层。
 - `state` 显示限流冷却、暂停的后端和搜索间隔；`--clear` 清空记忆。
 
@@ -129,6 +129,7 @@ Agent 应该 branch `ok` 和 `error.code`，不要解析底层文本。`tier` �
 - **不承诺完整评论树**：`comments` 动作返回的是已加载/可见范围。
 - **不把 `raw` 当公开输出**：默认只使用统一字段；需要调试时再看 `raw`。
 - **不手动挑后端**：不要指定 tier 或 backend，让 dispatch 按 P0 → P1 → P2 处理。
+- **URL 边界**：`web read` 默认拒绝 localhost、回环和内网地址；不要试图绕过，确有需要时由用户显式设置 `DEEP_REACH_ALLOW_PRIVATE_URLS=1`。
 - **降级不是失败**：`ok=true` 且 `degraded=true` 表示已自动换层，结果仍可用。
 - **平台边界**：`PLATFORM_BLOCKED` 时停止，不要换后端、换账号继续撞。
 - **配额边界**：P0 配额用完会自动走 P1/P2；不要为此切换账号。
