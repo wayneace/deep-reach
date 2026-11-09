@@ -25,7 +25,7 @@ TIER_ORDER = {tier: index for index, tier in enumerate(TIERS)}
 TIER_LABELS = {
     "p0": "原生免费接口（官方 API 免费层 / 公开 JSON / CLI）",
     "p1": "OpenCLI 浏览器桥（复用登录态）",
-    "p2": "第三方阅读/采集服务（Jina / Firecrawl / Bright Data）",
+    "p2": "第三方阅读/采集服务（Jina / Tavily / Brave / Firecrawl / Bright Data）",
 }
 
 TIER_ACCESS = {

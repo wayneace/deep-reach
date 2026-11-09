@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- 新增 P2 搜索/阅读后端：Tavily、Brave Search、Firecrawl、Bright Data。
+- 新增 `web search`：Tavily → Brave → Firecrawl → Bright Data，缺 key 自动跳过。
+- `web read` 和 4 个站点阅读动作的 P2 链扩展为 Jina → Firecrawl → Tavily Extract → Bright Data Web Unlocker。
+- P2 的 401/403 映射为 `NEED_SETUP`，402/429 映射为 `QUOTA_EXHAUSTED`（可继续降层）；Jina 的 429 也从 `RATE_LIMITED` 改为 `QUOTA_EXHAUSTED`。
+- `keys.example.yaml` 补充四家的 key、zone 与免费额度说明。
 - OpenCLI 未安装时，`doctor` / `channels` / `setup` / `update` 和动作错误都会给出安装命令 `npm install -g @jackwener/opencli`；已安装但浏览器未连接时仍提示 Browser Bridge 扩展。
 - 缺 key 时，`doctor` / `channels` / `setup` 和 `KEY_MISSING` 错误都会提示 keys 文件路径（默认 `~/.deep-reach/keys.yaml`）和包内模板 `deep_reach/data/keys.example.yaml`。
 - `doctor --json` 增加 `opencli.missing`、`keys_template`、`keys_hint`；旧版本或无法解析版本时也会显示升级/排查提示。非缺失类 OpenCLI 错误的 `opencli.installed` 从 `error: ...` 改为 `unavailable`，详情放在 `action`。

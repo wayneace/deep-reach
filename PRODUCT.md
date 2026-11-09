@@ -34,7 +34,7 @@
 |---|---|---|---|
 | **P0** | 平台原生免费接口：官方 API 免费层、公开 JSON、原生 CLI | 可选 key / 可选登录 | B站公开 API、腾讯行情、YouTube Data API、直连 HTTP、GitHub / eBay / Etsy / USPTO / EPO |
 | **P1** | OpenCLI 浏览器桥，复用已连接 Chrome 的登录态 | 可选登录 | 微博、X、Reddit、小红书、知乎、抖音、Amazon、雪球 |
-| **P2** | 第三方阅读/采集服务 | 可选 key | Jina Reader、Firecrawl、Bright Data |
+| **P2** | 第三方阅读/采集服务 | 可选 key | Jina Reader、Tavily、Brave、Firecrawl、Bright Data |
 
 降级规则：
 
@@ -48,7 +48,7 @@
 1. **一个动词表**：`search`、`read`、`comments`、`product`、`bestsellers`、`quote`。  
    Agent 不需要知道底层是官方 API、OpenCLI 还是阅读器。
 2. **只读**：不发帖、不评论、不点赞、不私信、不关注。
-3. **按层降级**：P0 → P1 → P2，先便宜后昂贵；不调用付费 API。
+3. **按层降级**：P0 → P1 → P2，先便宜后昂贵；只使用免费额度/免费 credit，不自动充值。
 4. **没有 key 也能跑**：缺 key / 缺登录只降级对应渠道，不阻塞其他渠道。
 5. **说人话**：错误码之外，必须告诉用户下一步做什么。
 6. **列出的渠道必须能用**：每个可见渠道至少有一条已验证路径；没实现的进 `roadmap`。
@@ -99,7 +99,7 @@ Agent-Reach 是同类产品，Deep-Reach 参考它的 Channel / Action / Backend
 - `experimental`：producthunt、kickstarter、cnipa、copyright。
 - P0 后端：`bilibili-public`、`tencent-quote`、`http-read`、`youtube-api`（需 key）、`github-api`（token 可选）、`v2ex-public`、`ebay-api`、`etsy-api`、`producthunt-api`、`uspto-odp`、`epo-ops`。
 - P1 后端：OpenCLI。
-- P2 后端：`jina`。
+- P2 后端：`jina`、`tavily-search` / `tavily-extract`、`brave-search`、`firecrawl-search` / `firecrawl-scrape`、`brightdata-serp` / `brightdata-unlocker`。
 - 雪球编排：`tencent-quote` / `tencent-search` → `xueqiu-api` → OpenCLI；`hot_stocks` 走雪球 API。
 - R3 可靠性：跨进程并发槽、10 秒搜索间隔、1 小时渠道冷却、60–120 秒后端暂停、动作级 deadline。
 - 环境感知状态：`doctor` / `channels` 的 `status` 反映 key、OpenCLI 连接和可用动作；`declared_status` 保留注册表原值。
@@ -109,6 +109,7 @@ Agent-Reach 是同类产品，Deep-Reach 参考它的 Channel / Action / Backend
 
 - R3 剩余：结果 cache。
 - 有 key 后：live 校验 eBay / Etsy / Product Hunt / USPTO / EPO。
+- 有 P2 key 后：live 校验 `web search` 和 `web read` 的 Tavily / Brave / Firecrawl / Bright Data。
 - Indiegogo 不做（Cloudflare 拦截，无公开 API）。
 - 其他站点：不写专属适配器，只走 OpenCLI / P2。
 
@@ -120,4 +121,4 @@ Agent-Reach 是同类产品，Deep-Reach 参考它的 Channel / Action / Backend
 - 缺 key / 缺登录时 `doctor` 能说清楚下一步。
 - 写命令 100% 被只读白名单拦截。
 - 每个可见渠道都有 capability note。
-- 142 个单元测试 + 1 个 live smoke 脚本。
+- 172 个单元测试 + 1 个 live smoke 脚本。

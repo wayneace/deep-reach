@@ -27,7 +27,8 @@
 | `amazon` | `product` | none | p1+p2 | 商品页信息 | 价格/库存以页面为准；p2 是网页读文 |
 | `amazon` | `bestsellers` | none | p1 | 榜单条目 | 不保证所有类目 |
 | `amazon` | `discussion` | none | p1 | 评论摘要/讨论 | 不保证完整评论树 |
-| `web` | `read` | none | p0+p2 | URL → 文本；p0 直连，p2 用 Jina | 不能绕过登录墙；无结构化字段 |
+| `web` | `search` | key | p2 | 通用网页搜索结果：标题、URL、摘要 | 需要至少一个 P2 key；结果质量取决于 provider |
+| `web` | `read` | none | p0+p2 | URL → 文本；p0 直连，p2 依次用 Jina/Firecrawl/Tavily/Bright Data | 不能绕过登录墙；无结构化字段 |
 | `github` | `search` | none | p0 | 仓库名、描述、stars/forks/issues、URL | 无 token 时额度低；不含代码搜索 |
 | `github` | `read` | none | p0 | 仓库信息 | 私有仓库需要 token 权限 |
 | `github` | `issues` | none | p0 | issue 标题、正文、作者、评论/反应数 | 不含 PR；不保证完整评论树 |

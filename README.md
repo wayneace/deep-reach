@@ -9,7 +9,7 @@
 
 ## 状态
 
-- 版本 **0.9.3**；142 个单元测试。
+- 版本 **0.10.0**；172 个单元测试。
 - 21 个可见渠道，14 个有 P0 覆盖；8 个 default 渠道 live smoke 通过。
 - `channels` / `doctor` 的 `status` 是**当前环境实测值**（`ready` / `degraded` / `needs_setup` / `needs_login` / `needs_key` / `experimental`）；`declared_status` 保留注册表声明。
 - 只读：不发帖、不评论、不点赞、不私信。
@@ -36,7 +36,7 @@ uv run deep-reach bilibili search "收纳" --limit 5
 |---|---|---|---|
 | **P0** | 平台原生免费接口：官方 API 免费层、公开 JSON、原生 CLI | 可选 key / 可选登录 | `bilibili-public`、`tencent-quote`、`tencent-search`、`http-read`、`youtube-api`、`github-api`、`v2ex-public`、`xueqiu-api`、`ebay-api`、`etsy-api`、`producthunt-api`、`uspto-odp`、`epo-ops` |
 | **P1** | OpenCLI 浏览器桥，复用已连接 Chrome 的登录态 | 可选登录 | `opencli-*` |
-| **P2** | 第三方阅读/采集服务 | 可选 key | `jina` |
+| **P2** | 第三方阅读/采集服务 | 可选 key | `jina`、`tavily`、`brave`、`firecrawl`、`brightdata` |
 
 规则：
 
@@ -127,6 +127,7 @@ uv run deep-reach epo search "desk organizer" --limit 10
 uv run deep-reach epo read EP1234567
 
 # 网页
+uv run deep-reach web search "desk organizer" --limit 10
 uv run deep-reach web read https://example.com/article
 
 # 诊断
@@ -166,6 +167,16 @@ eBay 需要 `official.ebay.client_id` + `client_secret`；Etsy 需要 `official.
 USPTO 需要 `official.uspto.odp_api_key`；EPO OPS 需要 `official.epo.consumer_key` + `consumer_secret`。  
 Jina Reader 可填免费 key：无 key 20 RPM，有 key 500 RPM。
 
+P2 搜索/阅读（按顺序降级，缺 key 自动跳过）：
+
+- `search.tavily.api_key`：1,000 credits/月，search basic 1 credit。
+- `search.brave.api_key`：每月 $5 credit（约 1,000 次 search），需展示 Brave attribution。
+- `search.firecrawl.api_key`：1,000 credits/月，scrape 1 credit/页，search 2 credits/10 条。
+- `search.brightdata.api_token` + `serp_zone` / `unlocker_zone`：5,000 credits/月，SERP/Unlocker 共用。
+
+`web search` 顺序：Tavily → Brave → Firecrawl → Bright Data。  
+`web read` 顺序：`http-read` → Jina → Firecrawl → Tavily Extract → Bright Data Web Unlocker。
+
 后端可以单独声明 key（`backend.key`），用于同一渠道不同层使用不同 key 的情况。
 
 ## 浏览器与 profile
@@ -201,7 +212,8 @@ uv run deep-reach profile set <contextId>
 deep_reach/
   channels/     # Channel / Action / Backend + tier + curated registry
   backends/     # P0: public/http/github/v2ex/xueqiu/ebay/etsy/producthunt/uspto/epo
-                # P1: opencli.py；P2: jina.py
+                # P1: opencli.py
+                # P2: jina.py / tavily.py / brave.py / firecrawl.py / brightdata.py
   runtime/      # dispatch / result / keys / doctor / profile / clock / state / health / limits / quota
   data/
     channels.yaml       # 精选渠道 + backend tier（随 wheel 打包）
@@ -237,7 +249,7 @@ MIT，见 [LICENSE](LICENSE)。第三方说明见 [NOTICE](NOTICE)。
 ## 边界
 
 - 只读；不替用户登录；不索要密码。
-- 不接付费 API；免费层用完自动降级。
+- 只使用各家的免费额度/免费 credit；不自动充值，不接需要付费的调用。
 - 不自建爬虫集群；P2 只调用第三方公开服务。
 - `web read` 默认只访问 http/https 公网地址；localhost、回环、私有网段、链路本地地址会被拒绝，重定向目标也会重新校验。确实需要访问内网时，显式设置 `DEEP_REACH_ALLOW_PRIVATE_URLS=1`。
 - 不承诺完整评论树、不承诺理解图片/视频。
