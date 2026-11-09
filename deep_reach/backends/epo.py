@@ -201,6 +201,9 @@ def _search(
 ) -> list[dict]:
     token = _token(keys, timeout, cache)
     try:
+        # EPO OPS takes Range as a URL parameter ("&Range=xx-xx"), not a
+        # header. Official FAQ:
+        # https://www.epo.org/en/service-support/faq/searching-patents/open-patent-services/general-information/how-many-results-are
         payload = fetch_json(
             SEARCH_URL,
             timeout=timeout,

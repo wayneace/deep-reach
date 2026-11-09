@@ -1,8 +1,11 @@
 import unittest
+from unittest import mock
 
-from deep_reach.backends.epo import _cql, _documents, _item as epo_item
+from deep_reach.backends.epo import _cql, _documents, _search
+from deep_reach.backends.epo import _item as epo_item
 from deep_reach.backends.uspto import _item as uspto_item
 from deep_reach.channels import load_registry
+from deep_reach.runtime.keys import Keys
 
 
 class UsptoParseTest(unittest.TestCase):
@@ -94,6 +97,34 @@ class EpoParseTest(unittest.TestCase):
     def test_cql(self):
         self.assertEqual(_cql("desk organizer"), 'ta="desk organizer"')
         self.assertEqual(_cql('a "quoted" thing'), 'ta="a  quoted  thing"')
+
+
+class EpoRequestTest(unittest.TestCase):
+    def test_search_sends_range_as_query_parameter(self):
+        captured = {}
+
+        def fake_fetch_json(url, **kwargs):
+            captured["url"] = url
+            captured["kwargs"] = kwargs
+            return EPO_PAYLOAD
+
+        keys = Keys(
+            {
+                "official": {
+                    "epo": {"consumer_key": "key", "consumer_secret": "secret"}
+                }
+            }
+        )
+        with mock.patch(
+            "deep_reach.backends.epo.fetch_json", side_effect=fake_fetch_json
+        ):
+            items = _search(
+                'ta="desk organizer"', 5, 10.0, keys, {"access_token": "token"}
+            )
+
+        self.assertEqual(len(items), 1)
+        self.assertEqual(captured["kwargs"]["params"]["Range"], "1-5")
+        self.assertNotIn("Range", captured["kwargs"].get("headers", {}))
 
 
 class Wave2RegistryTest(unittest.TestCase):
