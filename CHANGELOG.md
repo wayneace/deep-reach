@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## v0.9.1 — 2026-11-09
+
+安全/运维加固与 CI 收尾。
 
 - POSIX 下 `keys.yaml` 写入后收紧为 `0600`。
 - POSIX 下 OpenCLI 超时改为杀掉整个进程组，避免 wrapper 留下 node 子进程。
