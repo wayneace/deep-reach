@@ -9,7 +9,7 @@
 
 ## 状态
 
-- 版本 **0.9.2**；129 个单元测试。
+- 版本 **0.9.3**；129 个单元测试。
 - 21 个可见渠道，14 个有 P0 覆盖；8 个 default 渠道 live smoke 通过。
 - `channels` / `doctor` 的 `status` 是**当前环境实测值**（`ready` / `degraded` / `needs_setup` / `needs_login` / `needs_key` / `experimental`）；`declared_status` 保留注册表声明。
 - 只读：不发帖、不评论、不点赞、不私信。

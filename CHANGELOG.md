@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.9.3 — 2026-11-09
+
+- 稳定 `test_pacing_waits_between_searches` 的计时断言；v0.9.2 的 CI 在慢 runner 上因此抖动。功能无变化。
+
 ## v0.9.2 — 2026-11-09
 
 审查 minor 收尾。
