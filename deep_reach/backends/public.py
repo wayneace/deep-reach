@@ -24,7 +24,7 @@ from ..runtime.result import (
     ReachError,
     make_item,
 )
-from .http import fetch, fetch_json
+from .http import fetch_json
 
 _TAG_RE = re.compile(r"<[^>]+>")
 _BV_RE = re.compile(r"(BV[0-9A-Za-z]{10})")

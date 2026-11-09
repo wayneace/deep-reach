@@ -4,6 +4,9 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ${{ matrix.os }}
@@ -19,6 +22,17 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - run: uv sync --extra dev --locked
       - run: uv run pytest -q
+
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          python-version: "3.12"
+      - run: uv sync --extra dev --locked
+      - run: uv run ruff check .
+      - run: uv run pytest -q --cov=deep_reach --cov-report=term-missing --cov-fail-under=55
 
   package:
     runs-on: ubuntu-latest

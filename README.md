@@ -212,9 +212,13 @@ skill/
 ```bash
 uv sync --extra dev
 uv run pytest -q
+uv run ruff check .
+uv run pytest -q --cov=deep_reach --cov-report=term-missing
 uv run python scripts/smoke.py          # live smoke，需要网络
 uv run python scripts/smoke.py --include-optional   # 额外跑需要登录的渠道
 ```
+
+贡献说明见 [CONTRIBUTING.md](CONTRIBUTING.md)；安全问题见 [SECURITY.md](SECURITY.md)。
 
 - 单元测试不访问网络。
 - live smoke 会真实请求平台；浏览器渠道需要 OpenCLI 扩展。

@@ -23,7 +23,6 @@ from ..runtime.result import (
     KEY_MISSING,
     NOT_FOUND,
     RATE_LIMITED,
-    UPSTREAM_BROKEN,
     ReachError,
     make_item,
 )

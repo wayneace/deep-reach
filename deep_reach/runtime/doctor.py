@@ -101,7 +101,7 @@ def format_doctor_text(report: dict) -> str:
     lines = []
     opencli = report.get("opencli", {})
     profile = report.get("profile", {})
-    lines.append(f"deep-reach doctor")
+    lines.append("deep-reach doctor")
     lines.append(f"keys:     {report.get('keys_file')} ({'found' if report.get('keys_file_exists') else 'missing'})")
     lines.append(
         f"opencli:  {opencli.get('installed', 'not installed')} "

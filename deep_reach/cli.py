@@ -11,7 +11,6 @@ Default output is one JSON object. `--text` gives a human summary.
 from __future__ import annotations
 
 import argparse
-import json
 import shutil
 from importlib import resources
 import subprocess
@@ -45,10 +44,10 @@ from .runtime.availability import (
 )
 from .runtime.dispatch import run_action
 from .runtime.doctor import build_doctor_report, format_doctor_text
-from .runtime.keys import Keys, default_keys_path
+from .runtime.keys import Keys
 from .runtime.profile import launch as launch_profile
 from .runtime.profile import profile_dir, set_context, status as profile_status
-from .runtime.result import CONFIG_ERROR, ReachError, dump
+from .runtime.result import ReachError, dump
 
 JSON_DEFAULT = True
 
