@@ -193,6 +193,9 @@ channels:
         backends:
           - {label: opencli-amazon, site: amazon, command: product, args: ["{target}"]}
           - {label: jina, tier: p2, key: search.jina.api_key}
+          - {label: firecrawl-scrape, tier: p2, requires_key: true, key: search.firecrawl.api_key}
+          - {label: tavily-extract, tier: p2, requires_key: true, key: search.tavily.api_key}
+          - {label: brightdata-unlocker, tier: p2, requires_key: true, keys: [search.brightdata.api_token, search.brightdata.unlocker_zone]}
       bestsellers:
         description: Best Sellers 榜单
         requires: none
@@ -233,6 +236,9 @@ channels:
         backends:
           - {label: http-read, tier: p0}
           - {label: jina, tier: p2, key: search.jina.api_key}
+          - {label: firecrawl-scrape, tier: p2, requires_key: true, key: search.firecrawl.api_key}
+          - {label: tavily-extract, tier: p2, requires_key: true, key: search.tavily.api_key}
+          - {label: brightdata-unlocker, tier: p2, requires_key: true, keys: [search.brightdata.api_token, search.brightdata.unlocker_zone]}
 
   github:
     level: default
@@ -471,6 +477,9 @@ channels:
         backends:
           - {label: http-read, tier: p0}
           - {label: jina, tier: p2, key: search.jina.api_key}
+          - {label: firecrawl-scrape, tier: p2, requires_key: true, key: search.firecrawl.api_key}
+          - {label: tavily-extract, tier: p2, requires_key: true, key: search.tavily.api_key}
+          - {label: brightdata-unlocker, tier: p2, requires_key: true, keys: [search.brightdata.api_token, search.brightdata.unlocker_zone]}
 
   cnipa:
     level: experimental
@@ -490,6 +499,9 @@ channels:
         backends:
           - {label: http-read, tier: p0}
           - {label: jina, tier: p2, key: search.jina.api_key}
+          - {label: firecrawl-scrape, tier: p2, requires_key: true, key: search.firecrawl.api_key}
+          - {label: tavily-extract, tier: p2, requires_key: true, key: search.tavily.api_key}
+          - {label: brightdata-unlocker, tier: p2, requires_key: true, keys: [search.brightdata.api_token, search.brightdata.unlocker_zone]}
 
   copyright:
     level: experimental
@@ -509,6 +521,9 @@ channels:
         backends:
           - {label: http-read, tier: p0}
           - {label: jina, tier: p2, key: search.jina.api_key}
+          - {label: firecrawl-scrape, tier: p2, requires_key: true, key: search.firecrawl.api_key}
+          - {label: tavily-extract, tier: p2, requires_key: true, key: search.tavily.api_key}
+          - {label: brightdata-unlocker, tier: p2, requires_key: true, keys: [search.brightdata.api_token, search.brightdata.unlocker_zone]}
 
   # ── optional: free key ──────────────────────────────────
   ebay:

@@ -39,6 +39,24 @@ class P2RegistryTest(unittest.TestCase):
         result = channel_availability(channel, env)
         self.assertIn("search", result.available_actions)
 
+    def test_read_actions_have_full_p2_chain(self):
+        registry = load_registry()
+        expected = ["firecrawl-scrape", "tavily-extract", "brightdata-unlocker"]
+        targets = [
+            ("web", "read"),
+            ("amazon", "product"),
+            ("kickstarter", "read"),
+            ("cnipa", "read"),
+            ("copyright", "read"),
+        ]
+        for channel_name, action_name in targets:
+            labels = [
+                b.label
+                for b in registry.visible[channel_name].action(action_name).backends
+            ]
+            self.assertEqual(labels[-3:], expected, (channel_name, action_name))
+            self.assertIn("jina", labels)
+
 
 if __name__ == "__main__":
     unittest.main()
