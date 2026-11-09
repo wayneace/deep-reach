@@ -6,6 +6,7 @@
 - `web read` / `http-read` 只允许 http/https，并默认拒绝 localhost、回环、私有/链路本地/保留地址；每次重定向都会重新校验；`DEEP_REACH_ALLOW_PRIVATE_URLS=1` 可显式放行私有地址。
 - `keys.example.yaml` 移入 `deep_reach/data/` 并随 wheel 打包；`deep-reach setup` 打印包内模板路径。
 - EPO OPS 的 `Range` 确认是 URL 参数，新增请求形状回归测试。
+- 收尾：`channels` 新增 `effective_next_action`；畸形 URL 统一返回 `BAD_INPUT`；补充 hostname→私有 IP 回归测试。
 
 ## v0.8.0 — 2026-11-09
 

@@ -142,3 +142,23 @@ def channel_availability(channel: Channel, env: Environment) -> ChannelAvailabil
         available_actions=tuple(available),
         unavailable_actions=unavailable,
     )
+
+
+def next_action_for(channel: Channel, availability: ChannelAvailability) -> str:
+    """The most actionable next step for the channel's effective status."""
+    status = availability.status
+    if status == "needs_setup":
+        base = "安装/启用 OpenCLI Browser Bridge，然后运行 `deep-reach doctor`"
+        return f"{base}；安装后：{channel.next_action}" if channel.next_action else base
+    if status == "degraded":
+        names = ", ".join(availability.unavailable_actions)
+        return f"部分动作当前不可用（{names}）；运行 `deep-reach doctor` 查看原因"
+    if channel.next_action:
+        return channel.next_action
+    if status == "needs_login":
+        return f"在 Deep-Reach 专用 Chrome profile 登录 {channel.name} 后重试"
+    if status == "needs_key":
+        return f"填写 {channel.key_path}，或使用 fallback"
+    if status == "experimental":
+        return "该渠道可能不稳定；失败时稍后重试"
+    return "-"

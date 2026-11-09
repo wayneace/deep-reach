@@ -5,6 +5,7 @@ from deep_reach.channels.base import Action, BackendSpec, Channel, Param
 from deep_reach.runtime.availability import (
     Environment,
     channel_availability,
+    next_action_for,
 )
 from deep_reach.runtime.keys import Keys
 
@@ -130,6 +131,30 @@ class AvailabilityTest(unittest.TestCase):
             keys=Keys({"official": {"demo": {"a": "one"}}}), opencli_installed=False
         )
         self.assertEqual(channel_availability(ch, partial).status, "needs_key")
+
+    def test_next_action_for_needs_setup_mentions_opencli(self):
+        ch = channel("ready", [BackendSpec("opencli-demo", "search")])
+        ch.next_action = "search 需要登录"
+        result = channel_availability(ch, env(installed=False))
+        hint = next_action_for(ch, result)
+        self.assertIn("OpenCLI", hint)
+        self.assertIn("deep-reach doctor", hint)
+        self.assertIn("安装后", hint)
+
+    def test_next_action_for_degraded_lists_unavailable_actions(self):
+        ch = Channel(
+            name="amazon",
+            category="commerce",
+            status="ready",
+            actions=(
+                Action("search", backends=(BackendSpec("opencli-amazon", "search"),)),
+                Action("product", backends=(BackendSpec("jina", "product", tier="p2"),)),
+            ),
+        )
+        result = channel_availability(ch, env(installed=False))
+        hint = next_action_for(ch, result)
+        self.assertIn("search", hint)
+        self.assertIn("不可用", hint)
 
 
 if __name__ == "__main__":

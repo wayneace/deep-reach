@@ -38,7 +38,11 @@ from .product import LEVELS, NAME, NON_GOALS, PROMISES, TAGLINE, TIER_TABLE
 from .runtime import health as health_state
 from .runtime import quota as quota_state
 from .runtime import state as state_store
-from .runtime.availability import channel_availability, detect_environment
+from .runtime.availability import (
+    channel_availability,
+    detect_environment,
+    next_action_for,
+)
 from .runtime.dispatch import run_action
 from .runtime.doctor import build_doctor_report, format_doctor_text
 from .runtime.keys import Keys, default_keys_path
@@ -221,6 +225,7 @@ def cmd_channels(args: argparse.Namespace) -> int:
                     "limits": channel.limits,
                     "not_supported": list(channel.not_supported),
                     "next_action": channel.next_action,
+                    "effective_next_action": next_action_for(channel, availability),
                 }
             )
         _print_json({"channels": rows}, pretty=True)
@@ -235,12 +240,8 @@ def cmd_channels(args: argparse.Namespace) -> int:
             availability = channel_availability(channel, env)
             actions = ", ".join(a.name for a in channel.actions) or "-"
             print(f"  {channel.name:<14} {availability.status:<13} {actions}")
-            hint = channel.next_action
-            if availability.status == "needs_setup":
-                hint = "安装/启用 OpenCLI Browser Bridge 后可用" + (
-                    f"；{hint}" if hint else ""
-                )
-            if availability.status not in {"ready", "experimental"} and hint:
+            hint = next_action_for(channel, availability)
+            if availability.status not in {"ready", "experimental"} and hint != "-":
                 print(f"      → {hint}")
         print()
     print("Use `deep-reach <channel> <action> --help` for arguments.")

@@ -33,6 +33,29 @@ class UrlGuardTest(unittest.TestCase):
         self.assert_blocked("http://localhost:3000/")
         self.assert_blocked("http://api.localhost/")
 
+    def test_rejects_malformed_urls_as_bad_input(self):
+        self.assert_blocked("http://[")
+        self.assert_blocked("http://\udcff/")
+
+    def test_rejects_hostname_resolving_to_private_ip(self):
+        answers = [
+            [(2, 1, 6, "", ("127.0.0.1", 0))],
+            [(2, 1, 6, "", ("10.0.0.5", 0))],
+            [(2, 1, 6, "", ("169.254.169.254", 0))],
+            [
+                (2, 1, 6, "", ("93.184.216.34", 0)),
+                (2, 1, 6, "", ("127.0.0.1", 0)),
+            ],
+        ]
+        for index, result in enumerate(answers):
+            host = f"private-{index}.test"
+            with mock.patch(
+                "deep_reach.backends.http.socket.getaddrinfo", return_value=result
+            ):
+                with self.assertRaises(ReachError) as ctx:
+                    validate_url(f"https://{host}/")
+                self.assertEqual(ctx.exception.code, BAD_INPUT)
+
     def test_allows_public_https(self):
         with mock.patch(
             "deep_reach.backends.http.socket.getaddrinfo",

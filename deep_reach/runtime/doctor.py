@@ -8,31 +8,11 @@ from ..backends.opencli import RECOMMENDED_VERSION, OpenCLIClient, version_statu
 from ..channels.base import TIERS
 from ..channels.registry import Registry
 from . import health, quota
-from .availability import ChannelAvailability, channel_availability, environment_from_profile
+from .availability import channel_availability, environment_from_profile, next_action_for
 from .keys import Keys
 from .result import ReachError
 
 LEVEL_ORDER = ("default", "optional", "experimental")
-
-
-def _next_action(
-    channel, status: str, availability: ChannelAvailability
-) -> str:
-    if status == "needs_setup":
-        base = "安装/启用 OpenCLI Browser Bridge，然后运行 `deep-reach doctor`"
-        return f"{base}；或 {channel.next_action}" if channel.next_action else base
-    if status == "degraded":
-        names = ", ".join(availability.unavailable_actions)
-        return f"部分动作当前不可用（{names}）；运行 `deep-reach doctor` 查看原因"
-    if channel.next_action:
-        return channel.next_action
-    if status == "needs_login":
-        return f"在 Deep-Reach 专用 Chrome profile 登录 {channel.name} 后重试"
-    if status == "needs_key":
-        return f"填写 {channel.key_path}，或使用 fallback"
-    if status == "experimental":
-        return "该渠道可能不稳定；失败时稍后重试"
-    return "-"
 
 
 def build_doctor_report(
@@ -82,7 +62,7 @@ def build_doctor_report(
                 },
                 "limits": channel.limits,
                 "not_supported": list(channel.not_supported),
-                "next_action": _next_action(channel, status, availability),
+                "next_action": next_action_for(channel, availability),
             }
         )
 

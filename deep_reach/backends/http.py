@@ -84,7 +84,7 @@ def _host_is_private(host: str) -> bool:
         return not _is_public_ip(host)
     try:
         infos = socket.getaddrinfo(host, None)
-    except OSError:
+    except (OSError, UnicodeError):
         # The real request will report a network error; do not turn a DNS
         # failure into a policy failure.
         return False
@@ -93,7 +93,10 @@ def _host_is_private(host: str) -> bool:
 
 def validate_url(url: str) -> str:
     """Allow only public http(s) URLs; private addresses need an explicit opt-in."""
-    parsed = urllib.parse.urlparse(url)
+    try:
+        parsed = urllib.parse.urlparse(url)
+    except ValueError as exc:
+        raise ReachError(BAD_INPUT, f"invalid URL: {exc}") from exc
     scheme = parsed.scheme.lower()
     if scheme not in {"http", "https"}:
         raise ReachError(
@@ -103,6 +106,13 @@ def validate_url(url: str) -> str:
     host = parsed.hostname
     if not host:
         raise ReachError(BAD_INPUT, f"URL has no host: {url!r}")
+    if not _is_ip_literal(host):
+        try:
+            host.encode("idna")
+        except UnicodeError as exc:
+            raise ReachError(
+                BAD_INPUT, f"invalid URL host: {host!r}"
+            ) from exc
     if not _allow_private() and _host_is_private(host):
         raise ReachError(
             BAD_INPUT,

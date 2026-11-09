@@ -1,5 +1,7 @@
 # Deep-Reach 开发计划（v0.1 历史）
 
+> 历史文档。当前 keys 模板路径为 `deep_reach/data/keys.example.yaml`；CLI 状态语义与 URL 边界以 README 为准。
+
 > 注意：v0.2 已按产品思维重构。  
 > 产品定义见 [PRODUCT.md](PRODUCT.md)，重构计划见 [REFACTOR_PLAN.md](REFACTOR_PLAN.md)。  
 > 本文保留为 v0.1 的实施记录，部分命令和 registry 名称已过时。
