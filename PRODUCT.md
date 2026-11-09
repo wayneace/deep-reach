@@ -1,6 +1,6 @@
 # Deep-Reach 产品定义
 
-> 版本：v0.8  
+> 版本：v0.9  
 > 日期：2026-11-09
 
 ## 一句话
@@ -45,7 +45,7 @@
 
 ## 产品承诺
 
-1. **一个动词表**：`search`、`read`、`comments`、`product`、`bestsellers`、`quote`、`patent`。  
+1. **一个动词表**：`search`、`read`、`comments`、`product`、`bestsellers`、`quote`。  
    Agent 不需要知道底层是官方 API、OpenCLI 还是阅读器。
 2. **只读**：不发帖、不评论、不点赞、不私信、不关注。
 3. **按层降级**：P0 → P1 → P2，先便宜后昂贵；不调用付费 API。
@@ -90,7 +90,7 @@ Agent-Reach 是同类产品，Deep-Reach 参考它的 Channel / Action / Backend
 | 官方 API | 刻意不接 | P0 免费层优先 |
 | 产品调研 | 不覆盖 | Amazon / 众筹 / 专利是验证垂直 |
 
-## v0.8 范围
+## v0.9 范围
 
 ### 已实现
 
@@ -102,6 +102,8 @@ Agent-Reach 是同类产品，Deep-Reach 参考它的 Channel / Action / Backend
 - P2 后端：`jina`。
 - 雪球编排：`tencent-quote` / `tencent-search` → `xueqiu-api` → OpenCLI；`hot_stocks` 走雪球 API。
 - R3 可靠性：跨进程并发槽、10 秒搜索间隔、1 小时渠道冷却、60–120 秒后端暂停、动作级 deadline。
+- 环境感知状态：`doctor` / `channels` 的 `status` 反映 key、OpenCLI 连接和可用动作；`declared_status` 保留注册表原值。
+- URL 边界：`web read` 默认只访问 http/https 公网地址；每次重定向重新校验；`DEEP_REACH_ALLOW_PRIVATE_URLS=1` 可显式放行私有地址。
 
 ### 下一步
 
@@ -118,4 +120,4 @@ Agent-Reach 是同类产品，Deep-Reach 参考它的 Channel / Action / Backend
 - 缺 key / 缺登录时 `doctor` 能说清楚下一步。
 - 写命令 100% 被只读白名单拦截。
 - 每个可见渠道都有 capability note。
-- 85 个单元测试 + 1 个 live smoke 脚本。
+- 112 个单元测试 + 1 个 live smoke 脚本。

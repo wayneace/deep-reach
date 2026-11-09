@@ -604,7 +604,7 @@ channels:
     status: planned
     category: patent
     description: KIPRIS Plus
-    next_action: Phase R5
+    next_action: 后续版本
     key: official.kipris.api_key
     requires_key: true
     actions: {}
@@ -614,7 +614,7 @@ channels:
     status: planned
     category: patent
     description: EUIPO
-    next_action: Phase R5
+    next_action: 后续版本
     key: official.euipo.client_id
     requires_key: true
     actions: {}
@@ -624,7 +624,7 @@ channels:
     status: planned
     category: social
     description: Hacker News Algolia
-    next_action: Phase R5
+    next_action: 后续版本
     key: null
     requires_key: false
     actions: {}
@@ -634,7 +634,7 @@ channels:
     status: planned
     category: social
     description: 贴吧
-    next_action: Phase R5
+    next_action: 后续版本
     key: null
     requires_key: false
     actions: {}
@@ -644,7 +644,7 @@ channels:
     status: planned
     category: social
     description: 虎扑
-    next_action: Phase R5
+    next_action: 后续版本
     key: null
     requires_key: false
     actions: {}
@@ -654,7 +654,7 @@ channels:
     status: planned
     category: commerce
     description: 1688 采购
-    next_action: Phase R5（已有 1688 CLI）
+    next_action: 后续版本（已有 1688 CLI）
     key: null
     requires_key: false
     actions: {}
@@ -664,7 +664,7 @@ channels:
     status: planned
     category: commerce
     description: SellerSprite 关键词/市场
-    next_action: Phase R5（网页会员）
+    next_action: 后续版本（网页会员）
     key: null
     requires_key: false
     actions: {}

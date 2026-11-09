@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## v0.9.0 — 2026-11-09
+
+P0 加固与发布收尾。
 
 - `doctor` / `channels` 的 `status` 改为环境实测值（`ready` / `degraded` / `needs_setup` / `needs_login` / `needs_key` / `experimental`）；新增 `declared_status`、`runnable`、`available_actions`、`unavailable_actions`。多 key 渠道（eBay / EPO）要求所有 key 齐全；`xueqiu` 的 `hot` / `hot_stocks` 需要 cookie。
 - `web read` / `http-read` 只允许 http/https，并默认拒绝 localhost、回环、私有/链路本地/保留地址；每次重定向都会重新校验；`DEEP_REACH_ALLOW_PRIVATE_URLS=1` 可显式放行私有地址。
