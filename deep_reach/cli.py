@@ -19,15 +19,19 @@ from pathlib import Path
 from typing import Optional
 
 from . import __version__
+from .backends.brave import register_brave_backend
+from .backends.brightdata import register_brightdata_backends
 from .backends.ebay import register_ebay_backend
 from .backends.epo import register_epo_backend
 from .backends.etsy import register_etsy_backend
+from .backends.firecrawl import register_firecrawl_backends
 from .backends.github import register_github_backend
 from .backends.http import register_http_backends
 from .backends.jina import register_jina_backend
 from .backends.opencli import OpenCLIClient, register_opencli_backends
 from .backends.producthunt import register_producthunt_backend
 from .backends.public import register_public_backends
+from .backends.tavily import register_tavily_backends
 from .backends.uspto import register_uspto_backend
 from .backends.v2ex import register_v2ex_backend
 from .backends.xueqiu import register_xueqiu_backends
@@ -71,6 +75,10 @@ def _register_backends(keys: Keys) -> None:
     profile = keys.get("browser.opencli_profile") or "auto"
     register_opencli_backends(OpenCLIClient(profile=profile))
     register_jina_backend(keys)
+    register_tavily_backends(keys)
+    register_brave_backend(keys)
+    register_firecrawl_backends(keys)
+    register_brightdata_backends(keys)
     register_http_backends()
     register_public_backends(keys)
     register_github_backend(keys)

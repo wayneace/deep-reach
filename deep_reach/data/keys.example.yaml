@@ -50,15 +50,17 @@ xueqiu:
 
 search:
   exa:
-    api_key: ""          # 缺失 → 禁用
+    api_key: ""          # 预留；本次未接入
   tavily:
-    api_key: ""          # 缺失 → 禁用
+    api_key: ""          # 1,000 credits/月；search basic 1 credit
   firecrawl:
-    api_key: ""          # 缺失 → 禁用
+    api_key: ""          # 1,000 credits/月；scrape 1 credit/页，search 2 credits/10 条
   brightdata:
-    api_token: ""        # 缺失 → 禁用
+    api_token: ""        # 5,000 credits/月，SERP/Unlocker 共用
+    serp_zone: ""        # 在 Bright Data 控制台创建 SERP zone
+    unlocker_zone: ""    # 在 Bright Data 控制台创建 Web Unlocker zone
   brave:
-    api_key: ""          # 缺失 → 禁用
+    api_key: ""          # 每月 $5 credit（约 1,000 次 search）；需展示 Brave attribution
   jina:
     api_key: ""          # 缺失 → 20 RPM/IP；有 key → 500 RPM
 

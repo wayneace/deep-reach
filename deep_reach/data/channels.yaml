@@ -210,13 +210,22 @@ channels:
     level: default
     status: ready
     category: web
-    description: 通用网页阅读
-    limits: 需要公开 URL；不能绕过登录墙
+    description: 通用网页搜索与阅读
+    limits: 搜索需要至少一个 P2 key；阅读不能绕过登录墙
     not_supported: [登录墙内容, 结构化字段]
-    next_action: 先直连公开页；需要 JS 时自动用 Jina；可选填 key 提升额度
+    next_action: 搜索填 Tavily/Brave/Firecrawl/Bright Data 任一 key；阅读先直连，失败后走 Jina/Firecrawl/Tavily/Bright Data
     key: search.jina.api_key
     requires_key: false
     actions:
+      search:
+        description: 通用网页搜索
+        requires: key
+        params: [query, limit]
+        backends:
+          - {label: tavily-search, tier: p2, requires_key: true, key: search.tavily.api_key}
+          - {label: brave-search, tier: p2, requires_key: true, key: search.brave.api_key}
+          - {label: firecrawl-search, tier: p2, requires_key: true, key: search.firecrawl.api_key}
+          - {label: brightdata-serp, tier: p2, requires_key: true, keys: [search.brightdata.api_token, search.brightdata.serp_zone]}
       read:
         description: URL 转 Markdown
         requires: none
