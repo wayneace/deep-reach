@@ -20,10 +20,17 @@ def _search_items(payload: dict, channel: Channel, spec: BackendSpec) -> list[di
             f"firecrawl search failed: {payload.get('error') or 'unknown error'}",
         )
     data = payload.get("data")
-    if not isinstance(data, list):
+    if isinstance(data, dict):
+        results = data.get("web") or []
+    elif isinstance(data, list):
+        # Older v1 response shape.
+        results = data
+    else:
         raise ReachError(UPSTREAM_BROKEN, "firecrawl returned no search data")
+    if not isinstance(results, list):
+        raise ReachError(UPSTREAM_BROKEN, "firecrawl returned malformed search data")
     items = []
-    for result in data:
+    for result in results:
         if not isinstance(result, dict):
             continue
         items.append(

@@ -85,7 +85,27 @@ def _channels_path() -> Optional[Path]:
     return None
 
 
-def _param(name: str) -> Param:
+def _param(value: Any) -> Param:
+    if isinstance(value, dict):
+        name = str(value["name"])
+        default = value.get("default")
+        if name == "limit":
+            return Param(
+                name,
+                required=False,
+                type=int,
+                default=int(default) if default is not None else 20,
+            )
+        if name == "page":
+            return Param(
+                name,
+                required=False,
+                type=int,
+                default=int(default) if default is not None else 1,
+            )
+        return Param(name, required=bool(value.get("required", True)), default=default)
+
+    name = str(value)
     if name == "limit":
         return Param(name, required=False, type=int, default=20)
     if name == "page":

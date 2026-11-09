@@ -223,7 +223,7 @@ channels:
       search:
         description: 通用网页搜索
         requires: key
-        params: [query, limit]
+        params: [query, {name: limit, default: 10}]
         backends:
           - {label: tavily-search, tier: p2, requires_key: true, key: search.tavily.api_key}
           - {label: brave-search, tier: p2, requires_key: true, key: search.brave.api_key}

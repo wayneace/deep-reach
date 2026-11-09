@@ -121,4 +121,4 @@ Agent-Reach 是同类产品，Deep-Reach 参考它的 Channel / Action / Backend
 - 缺 key / 缺登录时 `doctor` 能说清楚下一步。
 - 写命令 100% 被只读白名单拦截。
 - 每个可见渠道都有 capability note。
-- 172 个单元测试 + 1 个 live smoke 脚本。
+- 176 个单元测试 + 1 个 live smoke 脚本。

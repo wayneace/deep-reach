@@ -8,6 +8,7 @@ from deep_reach.runtime.result import (
     NEED_SETUP,
     NOT_FOUND,
     QUOTA_EXHAUSTED,
+    UPSTREAM_BROKEN,
     ReachError,
 )
 
@@ -44,6 +45,29 @@ class CodeMapTest(unittest.TestCase):
             with self.assertRaises(ReachError) as ctx:
                 fetch("https://example.com", timeout=1)
         self.assertEqual(ctx.exception.code, NOT_FOUND)
+
+
+class NonJsonResponseTest(unittest.TestCase):
+    def test_200_html_raises_upstream_broken(self):
+        response = mock.MagicMock()
+        response.read.return_value = b"<html>not json</html>"
+        response.geturl.return_value = "https://example.com"
+        response.status = 200
+        headers = mock.MagicMock()
+        headers.get.side_effect = lambda key, default=None: {
+            "Content-Encoding": "",
+            "Content-Type": "text/html",
+        }.get(key, default)
+        headers.get_content_charset.return_value = "utf-8"
+        response.headers = headers
+        opener = mock.MagicMock()
+        opener.__enter__.return_value = response
+        with mock.patch("deep_reach.backends.http.validate_url"), mock.patch(
+            "deep_reach.backends.http._OPENER.open", return_value=opener
+        ):
+            with self.assertRaises(ReachError) as ctx:
+                fetch_json("https://example.com", timeout=1)
+        self.assertEqual(ctx.exception.code, UPSTREAM_BROKEN)
 
 
 if __name__ == "__main__":

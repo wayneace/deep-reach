@@ -25,6 +25,10 @@ class P2RegistryTest(unittest.TestCase):
         self.assertEqual(args.query, "desk")
         self.assertEqual(args.limit, 5)
 
+    def test_web_search_default_limit_is_10(self):
+        args = build_parser(load_registry()).parse_args(["web", "search", "desk"])
+        self.assertEqual(args.limit, 10)
+
     def test_web_search_needs_key_without_keys(self):
         channel = load_registry().visible["web"]
         env = Environment(keys=Keys({}), opencli_installed=False)

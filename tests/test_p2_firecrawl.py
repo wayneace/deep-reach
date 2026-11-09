@@ -28,7 +28,9 @@ class FirecrawlTest(unittest.TestCase):
             captured.update(url=url, **kwargs)
             return {
                 "success": True,
-                "data": [{"title": "T", "url": "https://x", "description": "D"}],
+                "data": {
+                    "web": [{"title": "T", "url": "https://x", "description": "D"}]
+                },
             }
 
         register_firecrawl_backends(Keys({"search": {"firecrawl": {"api_key": "fc"}}}))
@@ -50,7 +52,7 @@ class FirecrawlTest(unittest.TestCase):
         register_firecrawl_backends(Keys({"search": {"firecrawl": {"api_key": "fc"}}}))
         with mock.patch(
             "deep_reach.backends.firecrawl.p2_fetch_json",
-            return_value={"success": True, "data": []},
+            return_value={"success": True, "data": {"web": []}},
         ):
             items = BACKENDS.get("firecrawl-search")(
                 action="search",

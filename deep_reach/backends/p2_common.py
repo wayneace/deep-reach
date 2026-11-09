@@ -19,6 +19,9 @@ P2_CODE_MAP = {
 def p2_fetch_json(
     url: str, *, timeout: float, headers=None, params=None, data=None, method=None
 ) -> Any:
+    if data is not None:
+        headers = dict(headers or {})
+        headers.setdefault("Content-Type", "application/json")
     return fetch_json(
         url,
         timeout=timeout,
