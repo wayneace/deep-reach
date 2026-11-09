@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## v0.9.2 — 2026-11-09
+
+审查 minor 收尾。
 
 - `keys.yaml` 权限收紧移到写入前；chmod 失败不再中断写入。
 - POSIX 进程组清理容忍更多 `OSError`；Ctrl-C 会清理 OpenCLI 子进程。
