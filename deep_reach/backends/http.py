@@ -178,23 +178,47 @@ def _decode(raw: bytes, charset: Optional[str]) -> str:
     return raw.decode("utf-8", errors="replace")
 
 
-def _decompress(raw: bytes, encoding: str) -> bytes:
-    """Decompress gzip/deflate with a hard output cap."""
-    encoding = (encoding or "").lower()
-    if "gzip" in encoding:
-        wbits = 16 + zlib.MAX_WBITS
-    elif "deflate" in encoding:
-        wbits = -zlib.MAX_WBITS
-    else:
-        return raw
+def _decompress_member(raw: bytes, wbits: int, limit: int) -> tuple[bytes, bytes]:
+    """Decompress one gzip/deflate member and return (output, trailing bytes)."""
     decompressor = zlib.decompressobj(wbits)
-    output = decompressor.decompress(raw, MAX_DECOMPRESSED)
-    if decompressor.unconsumed_tail or not decompressor.eof:
+    try:
+        output = decompressor.decompress(raw, limit)
+    except zlib.error as exc:
         raise ReachError(
-            UPSTREAM_BROKEN,
-            "response is too large after decompression",
+            UPSTREAM_BROKEN, f"cannot decompress response: {exc}"
+        ) from exc
+    if decompressor.unconsumed_tail:
+        raise ReachError(
+            UPSTREAM_BROKEN, "response is too large after decompression"
         )
-    return output
+    if not decompressor.eof:
+        raise ReachError(UPSTREAM_BROKEN, "response is truncated")
+    return output, decompressor.unused_data
+
+
+def _decompress(raw: bytes, encoding: str) -> bytes:
+    """Decompress gzip/deflate with a hard output cap across all members."""
+    encoding = (encoding or "").lower()
+    if "deflate" in encoding:
+        output, _ = _decompress_member(raw, -zlib.MAX_WBITS, MAX_DECOMPRESSED)
+        return output
+    if "gzip" not in encoding:
+        return raw
+
+    chunks: list[bytes] = []
+    remaining = raw
+    total = 0
+    while remaining:
+        if total >= MAX_DECOMPRESSED:
+            raise ReachError(
+                UPSTREAM_BROKEN, "response is too large after decompression"
+            )
+        chunk, remaining = _decompress_member(
+            remaining, 16 + zlib.MAX_WBITS, MAX_DECOMPRESSED - total
+        )
+        total += len(chunk)
+        chunks.append(chunk)
+    return b"".join(chunks)
 
 
 def _http_code(status: int) -> str:
