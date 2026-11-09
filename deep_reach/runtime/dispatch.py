@@ -19,7 +19,7 @@ from typing import Callable, Optional
 from ..channels.base import Action, Channel
 from . import health
 from .clock import Clock
-from .keys import Keys
+from .keys import Keys, default_keys_path, template_path
 from .limits import acquire_request, is_browser_backend, pace, query_slot
 from .result import (
     BAD_INPUT,
@@ -94,12 +94,22 @@ def validate(action: Action, params: dict) -> dict:
     return clean
 
 
-def _pick_error(errors: list[ReachError]) -> ReachError:
+def _keys_hint(keys: Optional[Keys]) -> str:
+    path = keys.path if keys is not None and keys.path else default_keys_path()
+    return f"Add the key to {path} (template: {template_path()})."
+
+
+def _pick_error(
+    errors: list[ReachError], keys: Optional[Keys] = None
+) -> ReachError:
     """Report the most actionable failure across tiers."""
     if not errors:
         return ReachError(SOURCE_DISABLED, "no backend is available")
     rank = {code: index for index, code in enumerate(ERROR_PRIORITY)}
-    return min(errors, key=lambda err: rank.get(err.code, len(rank)))
+    chosen = min(errors, key=lambda err: rank.get(err.code, len(rank)))
+    if chosen.code == KEY_MISSING and not chosen.hint and keys is not None:
+        return ReachError(chosen.code, chosen.message, hint=_keys_hint(keys))
+    return chosen
 
 
 def _call_with_deadline(func: BackendFunc, kwargs: dict, clock: Clock) -> list[dict]:
@@ -200,11 +210,17 @@ def run_action(
                     path for path in key_paths if path and not keys.has(path)
                 ]
                 if missing:
-                    message = f"{', '.join(missing)} missing; skipping {spec.label}"
+                    target = keys.path or default_keys_path()
+                    message = (
+                        f"{', '.join(missing)} missing; add the key to {target}; "
+                        f"skipping {spec.label}"
+                    )
                     attempts.append(
                         _attempt(spec, KEY_MISSING, message=message)
                     )
-                    errors.append(ReachError(KEY_MISSING, message))
+                    errors.append(
+                        ReachError(KEY_MISSING, message, hint=_keys_hint(keys))
+                    )
                     continue
 
             paused = health.backend_pause(
@@ -339,5 +355,5 @@ def run_action(
         action=action_name,
         elapsed_ms=elapsed(),
         attempts=attempts,
-        error=_pick_error(errors),
+        error=_pick_error(errors, keys),
     )

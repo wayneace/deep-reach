@@ -8,9 +8,14 @@ from ..backends.opencli import RECOMMENDED_VERSION, OpenCLIClient, version_statu
 from ..channels.base import TIERS
 from ..channels.registry import Registry
 from . import health, quota
-from .availability import channel_availability, environment_from_profile, next_action_for
-from .keys import Keys
-from .result import ReachError
+from .availability import (
+    OPENCLI_INSTALL_COMMAND,
+    channel_availability,
+    environment_from_profile,
+    next_action_for,
+)
+from .keys import Keys, template_path
+from .result import NEED_SETUP, ReachError
 
 LEVEL_ORDER = ("default", "optional", "experimental")
 
@@ -25,11 +30,17 @@ def build_doctor_report(
         installed = client.version()
         opencli_version = version_status(installed)
     except ReachError as exc:
+        missing = exc.code == NEED_SETUP
         opencli_version = {
-            "installed": f"error: {exc.message}",
+            "installed": "not installed" if missing else "unavailable",
+            "missing": missing,
             "recommended": RECOMMENDED_VERSION,
             "up_to_date": False,
-            "action": exc.message,
+            "action": (
+                f"OpenCLI is not installed; install it with: {OPENCLI_INSTALL_COMMAND}"
+                if missing
+                else exc.message
+            ),
         }
 
     profile = client.profile_status()
@@ -62,7 +73,7 @@ def build_doctor_report(
                 },
                 "limits": channel.limits,
                 "not_supported": list(channel.not_supported),
-                "next_action": next_action_for(channel, availability),
+                "next_action": next_action_for(channel, availability, env),
             }
         )
 
@@ -84,9 +95,17 @@ def build_doctor_report(
             tier: sum(1 for row in rows if tier in row["tiers"]) for tier in TIERS
         },
     }
+    template = template_path()
+    keys_exists = bool(keys.path and keys.path.exists())
     return {
         "keys_file": str(keys.path),
-        "keys_file_exists": bool(keys.path and keys.path.exists()),
+        "keys_file_exists": keys_exists,
+        "keys_template": str(template),
+        "keys_hint": (
+            ""
+            if keys_exists
+            else f"Create it from {template} (all keys optional)."
+        ),
         "opencli": opencli_version,
         "profile": profile,
         "state": health.report(),
@@ -103,11 +122,19 @@ def format_doctor_text(report: dict) -> str:
     profile = report.get("profile", {})
     lines.append("deep-reach doctor")
     lines.append(f"keys:     {report.get('keys_file')} ({'found' if report.get('keys_file_exists') else 'missing'})")
-    lines.append(
-        f"opencli:  {opencli.get('installed', 'not installed')} "
-        f"(recommended {opencli.get('recommended', '?')})"
-    )
-    if opencli.get("up_to_date") is False and opencli.get("action"):
+    if not report.get("keys_file_exists") and report.get("keys_hint"):
+        lines.append(f"          → {report['keys_hint']}")
+    if opencli.get("missing"):
+        lines.append(
+            f"opencli:  not installed "
+            f"(recommended {opencli.get('recommended', '?')})"
+        )
+    else:
+        lines.append(
+            f"opencli:  {opencli.get('installed', 'not installed')} "
+            f"(recommended {opencli.get('recommended', '?')})"
+        )
+    if opencli.get("up_to_date") is not True and opencli.get("action"):
         lines.append(f"          → {opencli['action']}")
     if profile.get("connected"):
         lines.append(
@@ -122,7 +149,12 @@ def format_doctor_text(report: dict) -> str:
                 f"https://github.com/jackwener/opencli/releases"
             )
     else:
-        lines.append(f"browser:  not connected ({profile.get('error', 'install the Browser Bridge extension')})")
+        detail = (
+            "OpenCLI is not installed"
+            if opencli.get("missing")
+            else profile.get("error", "install the Browser Bridge extension")
+        )
+        lines.append(f"browser:  not connected ({detail})")
     lines.append("")
 
     by_level: dict[str, list] = {level: [] for level in LEVEL_ORDER}

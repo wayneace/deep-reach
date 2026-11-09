@@ -9,7 +9,7 @@
 
 ## 状态
 
-- 版本 **0.9.3**；129 个单元测试。
+- 版本 **0.9.3**；142 个单元测试。
 - 21 个可见渠道，14 个有 P0 覆盖；8 个 default 渠道 live smoke 通过。
 - `channels` / `doctor` 的 `status` 是**当前环境实测值**（`ready` / `degraded` / `needs_setup` / `needs_login` / `needs_key` / `experimental`）；`declared_status` 保留注册表声明。
 - 只读：不发帖、不评论、不点赞、不私信。
@@ -170,7 +170,13 @@ Jina Reader 可填免费 key：无 key 20 RPM，有 key 500 RPM。
 
 ## 浏览器与 profile
 
-OpenCLI 通过 Browser Bridge 扩展连接 Chrome。首次使用需要手动安装一次扩展：
+OpenCLI 通过 Browser Bridge 扩展连接 Chrome。先安装 CLI：
+
+```bash
+npm install -g @jackwener/opencli   # 当前推荐 2.0.3
+```
+
+首次使用还需要手动安装一次扩展：
 
 1. 打开 Chrome。
 2. 安装扩展：<https://chromewebstore.google.com/detail/opencli/ildkmabpimmkaediidaifkhjpohdnifk>

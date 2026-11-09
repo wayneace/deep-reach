@@ -18,9 +18,15 @@ from dataclasses import dataclass
 from typing import Optional
 
 from ..channels.base import Action, BackendSpec, Channel
-from .keys import Keys
+from .keys import Keys, default_keys_path, template_path
 
 OPENCLI_BIN_ENV = "DEEP_REACH_OPENCLI_BIN"
+OPENCLI_PACKAGE = "@jackwener/opencli"
+OPENCLI_INSTALL_COMMAND = f"npm install -g {OPENCLI_PACKAGE}"
+BROWSER_BRIDGE_URL = (
+    "https://chromewebstore.google.com/detail/opencli/"
+    "ildkmabpimmkaediidaifkhjpohdnifk"
+)
 
 
 def _opencli_installed() -> bool:
@@ -144,21 +150,51 @@ def channel_availability(channel: Channel, env: Environment) -> ChannelAvailabil
     )
 
 
-def next_action_for(channel: Channel, availability: ChannelAvailability) -> str:
+def next_action_for(
+    channel: Channel,
+    availability: ChannelAvailability,
+    env: Optional[Environment] = None,
+) -> str:
     """The most actionable next step for the channel's effective status."""
     status = availability.status
     if status == "needs_setup":
-        base = "安装/启用 OpenCLI Browser Bridge，然后运行 `deep-reach doctor`"
+        if env is not None and not env.opencli_installed:
+            base = (
+                f"安装 OpenCLI（`{OPENCLI_INSTALL_COMMAND}`），"
+                "然后运行 `deep-reach doctor`"
+            )
+        else:
+            base = (
+                "安装/启用 OpenCLI Browser Bridge 扩展"
+                f"（{BROWSER_BRIDGE_URL}），然后运行 `deep-reach doctor`"
+            )
         return f"{base}；安装后：{channel.next_action}" if channel.next_action else base
     if status == "degraded":
         names = ", ".join(availability.unavailable_actions)
+        reasons = " ".join(
+            reason
+            for items in availability.unavailable_actions.values()
+            for reason in items
+        )
+        if env is not None and "missing" in reasons:
+            path = env.keys.path or default_keys_path()
+            return (
+                f"部分动作当前不可用（{names}）；缺 key 的写入 {path}"
+                f"（模板：{template_path()}）；运行 `deep-reach doctor` 查看原因"
+            )
         return f"部分动作当前不可用（{names}）；运行 `deep-reach doctor` 查看原因"
+    if status == "needs_key":
+        path = (
+            env.keys.path
+            if env is not None and env.keys.path
+            else default_keys_path()
+        )
+        detail = channel.next_action or f"填写 {channel.key_path or '对应 key'}"
+        return f"{detail}；写入 {path}（模板：{template_path()}）"
     if channel.next_action:
         return channel.next_action
     if status == "needs_login":
         return f"在 Deep-Reach 专用 Chrome profile 登录 {channel.name} 后重试"
-    if status == "needs_key":
-        return f"填写 {channel.key_path}，或使用 fallback"
     if status == "experimental":
         return "该渠道可能不稳定；失败时稍后重试"
     return "-"

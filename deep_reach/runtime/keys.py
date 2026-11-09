@@ -34,6 +34,13 @@ def default_keys_path() -> Path:
     return Path.home() / ".deep-reach" / "keys.yaml"
 
 
+def template_path() -> Path:
+    """Absolute path to the packaged keys template."""
+    from importlib import resources
+
+    return Path(str(resources.files("deep_reach.data").joinpath("keys.example.yaml")))
+
+
 class Keys:
     """A read-only view over keys.yaml plus optional environment overrides."""
 

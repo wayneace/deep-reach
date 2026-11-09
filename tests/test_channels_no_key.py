@@ -1,4 +1,6 @@
+import tempfile
 import unittest
+from pathlib import Path
 
 from deep_reach.channels import load_channels
 from deep_reach.runtime.dispatch import run_action
@@ -44,6 +46,24 @@ class NoKeyTest(unittest.TestCase):
         )
         self.assertFalse(env["ok"])
         self.assertIn(env["error"]["code"], {"NEED_SETUP", "SOURCE_DISABLED"})
+
+    def test_key_missing_attempt_points_to_keys_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            key_path = Path(tmp) / "keys.yaml"
+            env = run_action(
+                load_channels()["ebay"],
+                "search",
+                {"query": "desk", "limit": 1},
+                keys=Keys({}, path=key_path),
+            )
+        self.assertFalse(env["ok"])
+        messages = [attempt.get("message", "") for attempt in env["meta"]["attempts"]]
+        self.assertTrue(
+            any(str(key_path) in message for message in messages),
+            messages,
+        )
+        self.assertIn(str(key_path), env["error"]["hint"])
+        self.assertIn("keys.example.yaml", env["error"]["hint"])
 
 
 if __name__ == "__main__":

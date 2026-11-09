@@ -14,6 +14,7 @@ import subprocess
 from typing import Optional
 
 from ..channels.base import BackendSpec, Channel
+from ..runtime.availability import OPENCLI_INSTALL_COMMAND, OPENCLI_PACKAGE
 from ..runtime.dispatch import BACKENDS
 from ..runtime.result import (
     BAD_INPUT,
@@ -27,7 +28,7 @@ from .opencli_compat import classify_opencli_error, opencli_items, parse_envelop
 
 #: Oldest OpenCLI this project is tested against. `deep-reach doctor` compares
 #: the installed version and tells the user how to upgrade; it never upgrades
-#: automatically, because OpenCLI is a Cherry-managed CLI.
+#: automatically, because OpenCLI is an external CLI.
 RECOMMENDED_VERSION = "2.0.3"
 
 OPENCLI_LABELS = (
@@ -61,6 +62,7 @@ def version_status(
     if current is None or target is None:
         return {
             "installed": installed,
+            "missing": False,
             "recommended": recommended,
             "up_to_date": None,
             "action": "cannot parse the installed OpenCLI version",
@@ -68,12 +70,13 @@ def version_status(
     up_to_date = current >= target
     return {
         "installed": installed,
+        "missing": False,
         "recommended": recommended,
         "up_to_date": up_to_date,
         "action": ""
         if up_to_date
-        else "OpenCLI is older than recommended; reinstall it with "
-        "cli_install name=opencli tool=npm:@jackwener/opencli",
+        else "OpenCLI is older than recommended; upgrade with: "
+        f"npm install -g {OPENCLI_PACKAGE}@{recommended}",
     }
 
 
@@ -172,7 +175,7 @@ class OpenCLIClient:
         except FileNotFoundError as exc:
             raise ReachError(
                 NEED_SETUP,
-                "opencli is not installed; install it as a Cherry managed CLI",
+                f"opencli is not installed; install it with: {OPENCLI_INSTALL_COMMAND}",
             ) from exc
         try:
             stdout, stderr = proc.communicate(timeout=timeout)

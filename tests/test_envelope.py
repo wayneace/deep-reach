@@ -3,6 +3,8 @@ import unittest
 
 from deep_reach.runtime.result import (
     BAD_INPUT,
+    DEFAULT_HINTS,
+    KEY_MISSING,
     ReachError,
     dump,
     envelope,
@@ -11,6 +13,9 @@ from deep_reach.runtime.result import (
 
 
 class EnvelopeTest(unittest.TestCase):
+    def test_key_missing_hint_mentions_doctor(self):
+        self.assertIn("deep-reach doctor", DEFAULT_HINTS[KEY_MISSING])
+
     def test_make_item_shape(self):
         item = make_item(
             source="youtube",

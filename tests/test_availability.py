@@ -1,4 +1,5 @@
 import unittest
+from pathlib import Path
 
 from deep_reach.channels import load_registry
 from deep_reach.channels.base import Action, BackendSpec, Channel, Param
@@ -140,6 +141,71 @@ class AvailabilityTest(unittest.TestCase):
         self.assertIn("OpenCLI", hint)
         self.assertIn("deep-reach doctor", hint)
         self.assertIn("安装后", hint)
+
+    def test_next_action_for_missing_opencli_gives_install_command(self):
+        ch = channel("ready", [BackendSpec("opencli-demo", "search")])
+        environment = env(installed=False)
+        result = channel_availability(ch, environment)
+        hint = next_action_for(ch, result, environment)
+        self.assertIn("npm install -g @jackwener/opencli", hint)
+        self.assertIn("deep-reach doctor", hint)
+
+    def test_next_action_for_disconnected_browser_mentions_extension(self):
+        ch = channel("ready", [BackendSpec("opencli-demo", "search")])
+        environment = env(installed=True, connected=False)
+        result = channel_availability(ch, environment)
+        hint = next_action_for(ch, result, environment)
+        self.assertIn("Browser Bridge", hint)
+        self.assertNotIn("npm install", hint)
+
+    def test_next_action_for_degraded_key_missing_gives_keys_file(self):
+        ch = Channel(
+            name="xueqiu",
+            category="social",
+            status="ready",
+            actions=(
+                Action("hot", backends=(BackendSpec("opencli-demo", "hot"),)),
+                Action(
+                    "hot_stocks",
+                    backends=(
+                        BackendSpec(
+                            "xueqiu-api",
+                            "hot_stocks",
+                            tier="p0",
+                            requires_key=True,
+                            key="xueqiu.cookie",
+                        ),
+                    ),
+                ),
+            ),
+        )
+        environment = Environment(
+            keys=Keys({}, path=Path("/nonexistent/deep-reach-keys.yaml")),
+            opencli_installed=True,
+            browser_connected=True,
+        )
+        result = channel_availability(ch, environment)
+        self.assertEqual(result.status, "degraded")
+        hint = next_action_for(ch, result, environment)
+        self.assertIn("/nonexistent/deep-reach-keys.yaml", hint)
+        self.assertIn("keys.example.yaml", hint)
+
+    def test_next_action_for_needs_key_gives_keys_file_and_template(self):
+        ch = channel(
+            "needs_key",
+            [BackendSpec("demo-api", "search", tier="p0", requires_key=True)],
+        )
+        ch.key_path = "official.demo.api_key"
+        ch.next_action = "申请 demo key"
+        environment = Environment(
+            keys=Keys({}, path=Path("/tmp/deep-reach-keys.yaml")),
+            opencli_installed=False,
+        )
+        result = channel_availability(ch, environment)
+        hint = next_action_for(ch, result, environment)
+        self.assertIn("/tmp/deep-reach-keys.yaml", hint)
+        self.assertIn("keys.example.yaml", hint)
+        self.assertIn("申请 demo key", hint)
 
     def test_next_action_for_degraded_lists_unavailable_actions(self):
         ch = Channel(

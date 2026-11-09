@@ -11,8 +11,8 @@ Default output is one JSON object. `--text` gives a human summary.
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
-from importlib import resources
 import subprocess
 import sys
 from pathlib import Path
@@ -38,13 +38,15 @@ from .runtime import health as health_state
 from .runtime import quota as quota_state
 from .runtime import state as state_store
 from .runtime.availability import (
+    OPENCLI_BIN_ENV,
+    OPENCLI_INSTALL_COMMAND,
     channel_availability,
     detect_environment,
     next_action_for,
 )
 from .runtime.dispatch import run_action
 from .runtime.doctor import build_doctor_report, format_doctor_text
-from .runtime.keys import Keys
+from .runtime.keys import Keys, template_path
 from .runtime.profile import launch as launch_profile
 from .runtime.profile import profile_dir, set_context, status as profile_status
 from .runtime.result import ReachError, dump
@@ -224,7 +226,9 @@ def cmd_channels(args: argparse.Namespace) -> int:
                     "limits": channel.limits,
                     "not_supported": list(channel.not_supported),
                     "next_action": channel.next_action,
-                    "effective_next_action": next_action_for(channel, availability),
+                    "effective_next_action": next_action_for(
+                        channel, availability, env
+                    ),
                 }
             )
         _print_json({"channels": rows}, pretty=True)
@@ -239,7 +243,7 @@ def cmd_channels(args: argparse.Namespace) -> int:
             availability = channel_availability(channel, env)
             actions = ", ".join(a.name for a in channel.actions) or "-"
             print(f"  {channel.name:<14} {availability.status:<13} {actions}")
-            hint = next_action_for(channel, availability)
+            hint = next_action_for(channel, availability, env)
             if availability.status not in {"ready", "experimental"} and hint != "-":
                 print(f"      → {hint}")
         print()
@@ -422,7 +426,9 @@ def cmd_setup(args: argparse.Namespace) -> int:
     checks.append(("python", sys.version.split()[0], "ok"))
     uv = shutil.which("uv")
     checks.append(("uv", uv or "not found", "ok" if uv else "missing"))
-    opencli = shutil.which("opencli")
+    npm = shutil.which("npm")
+    checks.append(("npm", npm or "not found", "ok" if npm else "missing"))
+    opencli = os.environ.get(OPENCLI_BIN_ENV) or shutil.which("opencli")
     version = "not installed"
     if opencli:
         try:
@@ -445,7 +451,7 @@ def cmd_setup(args: argparse.Namespace) -> int:
         print(f"CONFIG_ERROR: {exc.message}", file=sys.stderr)
         return 2
     checks.append(("keys", str(keys.path), "ok" if keys.path and keys.path.exists() else "missing (optional)"))
-    template = resources.files("deep_reach.data").joinpath("keys.example.yaml")
+    template = template_path()
     checks.append(("template", str(template), "ok" if template.is_file() else "missing"))
 
     profile = profile_status(keys)
@@ -463,14 +469,29 @@ def cmd_setup(args: argparse.Namespace) -> int:
     for name, value, state in checks:
         print(f"  {name:<10} {state:<18} {value}")
     print()
-    if not connected:
+    keys_exists = bool(keys.path and keys.path.exists())
+    if not keys_exists and keys.path is not None:
+        keys.path.parent.mkdir(parents=True, exist_ok=True)
+    printed_next = False
+    if not opencli:
+        print("Next: install OpenCLI:")
+        print(f"  {OPENCLI_INSTALL_COMMAND}")
+        print("Then install/enable the Browser Bridge extension:")
+        print("  1. opencli.info/download or Chrome Web Store")
+        print("  2. chrome://extensions → enable")
+        print("  3. deep-reach doctor")
+        printed_next = True
+    elif not connected:
         print("Next: install/enable the OpenCLI Browser Bridge extension:")
         print("  1. opencli.info/download or Chrome Web Store")
         print("  2. chrome://extensions → enable")
         print("  3. deep-reach doctor")
-    elif not (keys.path and keys.path.exists()):
-        print(f"Next: copy {template} to {keys.path} (all keys optional).")
-    else:
+        printed_next = True
+    if not keys_exists:
+        if printed_next:
+            print()
+        print(f"Keys: optional — copy {template} to {keys.path}.")
+    if opencli and connected:
         print("Next: deep-reach doctor")
     return 0
 
@@ -553,8 +574,8 @@ def cmd_update(args: argparse.Namespace) -> int:
     print("Deep-Reach update")
     print()
     print(f"OpenCLI target version: {RECOMMENDED_VERSION}")
-    print("OpenCLI is a Cherry managed CLI. Update it in Cherry Studio:")
-    print("  cli_install  name=opencli  tool=npm:@jackwener/opencli")
+    print("Update OpenCLI with npm:")
+    print(f"  {OPENCLI_INSTALL_COMMAND}@{RECOMMENDED_VERSION}")
     print("  or check: opencli --version")
     print("  or: deep-reach doctor   # compares installed vs recommended")
     if args.check:

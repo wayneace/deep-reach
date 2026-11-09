@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- OpenCLI 未安装时，`doctor` / `channels` / `setup` / `update` 和动作错误都会给出安装命令 `npm install -g @jackwener/opencli`；已安装但浏览器未连接时仍提示 Browser Bridge 扩展。
+- 缺 key 时，`doctor` / `channels` / `setup` 和 `KEY_MISSING` 错误都会提示 keys 文件路径（默认 `~/.deep-reach/keys.yaml`）和包内模板 `deep_reach/data/keys.example.yaml`。
+- `doctor --json` 增加 `opencli.missing`、`keys_template`、`keys_hint`；旧版本或无法解析版本时也会显示升级/排查提示。非缺失类 OpenCLI 错误的 `opencli.installed` 从 `error: ...` 改为 `unavailable`，详情放在 `action`。
+
 ## v0.9.3 — 2026-11-09
 
 - 稳定 `test_pacing_waits_between_searches` 的计时断言；v0.9.2 的 CI 在慢 runner 上因此抖动。功能无变化。

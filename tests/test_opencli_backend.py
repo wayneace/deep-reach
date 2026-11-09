@@ -7,11 +7,12 @@ from unittest import mock
 from deep_reach.backends.opencli import (
     OpenCLIClient,
     register_opencli_backends,
+    version_status,
 )
 from deep_reach.channels.base import Action, BackendSpec, Channel, Param
 from deep_reach.runtime.dispatch import BACKENDS, run_action
 from deep_reach.runtime.keys import Keys
-from deep_reach.runtime.result import WRITE_BLOCKED, ReachError
+from deep_reach.runtime.result import NEED_SETUP, WRITE_BLOCKED, ReachError
 
 
 class FakeClient(OpenCLIClient):
@@ -144,6 +145,18 @@ class OpenCLIBackendTest(unittest.TestCase):
         self.assertEqual(env["backend"], "opencli-twitter")
         self.assertEqual(env["items"][0]["title"], "hit")
         self.assertEqual(env["items"][0]["source"], "x")
+
+    def test_missing_binary_error_gives_install_command(self):
+        client = OpenCLIClient(bin_path="deep-reach-test-opencli-missing")
+        with self.assertRaises(ReachError) as ctx:
+            client.version()
+        self.assertEqual(ctx.exception.code, NEED_SETUP)
+        self.assertIn("npm install -g @jackwener/opencli", ctx.exception.message)
+
+    def test_version_status_outdated_gives_npm_upgrade(self):
+        status = version_status("2.0.1")
+        self.assertFalse(status["up_to_date"])
+        self.assertIn("npm install -g @jackwener/opencli", status["action"])
 
 
 if __name__ == "__main__":

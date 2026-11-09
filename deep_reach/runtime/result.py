@@ -89,7 +89,10 @@ DEFAULT_HINTS = {
     PLATFORM_BLOCKED: "Stop automation and resolve the verification manually.",
     NOT_FOUND: "Check the link or id.",
     BAD_INPUT: "Run `deep-reach channels` to see valid usage.",
-    KEY_MISSING: "This source is degraded; configure the key or use the fallback.",
+    KEY_MISSING: (
+        "Run `deep-reach doctor` to see where to add the key; "
+        "or use the fallback."
+    ),
     QUOTA_EXHAUSTED: "Free-tier quota is exhausted; the fallback will be used.",
     SOURCE_DISABLED: "No backend is available for this source.",
     CONFIG_ERROR: "Fix the configuration file and retry.",
