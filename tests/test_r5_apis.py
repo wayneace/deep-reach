@@ -92,6 +92,16 @@ class ProductHuntParseTest(unittest.TestCase):
         err = _map_error(ReachError(UPSTREAM_BROKEN, "rate limit exceeded"))
         self.assertEqual(err.code, RATE_LIMITED)
 
+    def test_rate_limit_wins_over_access_token_words(self):
+        err = _map_error(
+            ReachError(UPSTREAM_BROKEN, "rate limit exceeded for your access token")
+        )
+        self.assertEqual(err.code, RATE_LIMITED)
+
+    def test_hyphenated_rate_limit(self):
+        err = _map_error(ReachError(UPSTREAM_BROKEN, "rate-limit exceeded"))
+        self.assertEqual(err.code, RATE_LIMITED)
+
 
 class QuotaTest(unittest.TestCase):
     def test_reserve_and_exhaust(self):

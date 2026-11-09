@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- `keys.yaml` 权限收紧移到写入前；chmod 失败不再中断写入。
+- POSIX 进程组清理容忍更多 `OSError`；Ctrl-C 会清理 OpenCLI 子进程。
+- Product Hunt 限流匹配支持 `rate-limit` / `rate_limit`，并优先于 token 判断。
+- deflate 同时支持 raw 与 zlib-wrapped。
+- 补充 fetch→解压集成测试；CI 将 ruff/coverage 合并到现有 3.12 测试腿，避免重复跑。
+
 ## v0.9.1 — 2026-11-09
 
 安全/运维加固与 CI 收尾。

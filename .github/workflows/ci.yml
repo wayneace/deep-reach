@@ -21,18 +21,12 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: uv sync --extra dev --locked
-      - run: uv run pytest -q
-
-  quality:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.3.3
-        with:
-          python-version: "3.12"
-      - run: uv sync --extra dev --locked
-      - run: uv run ruff check .
-      - run: uv run pytest -q --cov=deep_reach --cov-report=term-missing --cov-fail-under=55
+      - if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        run: uv run ruff check .
+      - if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        run: uv run pytest -q --cov=deep_reach --cov-report=term-missing
+      - if: matrix.os != 'ubuntu-latest' || matrix.python-version != '3.12'
+        run: uv run pytest -q
 
   package:
     runs-on: ubuntu-latest

@@ -86,6 +86,29 @@ class OpenCLIBackendTest(unittest.TestCase):
             client._run(["doctor"], timeout=1, with_profile=False)
         self.assertTrue(popen.call_args.kwargs.get("start_new_session"))
 
+    def test_posix_kill_tree_ignores_os_errors(self):
+        if os.name == "nt":
+            self.skipTest("POSIX only")
+        client = OpenCLIClient(bin_path="fake-opencli")
+        proc = mock.Mock(pid=1234)
+        with mock.patch(
+            "deep_reach.backends.opencli.os.getpgid",
+            side_effect=PermissionError("denied"),
+        ):
+            client._kill_tree(proc)
+
+    def test_keyboard_interrupt_kills_process_group(self):
+        client = OpenCLIClient(bin_path="fake-opencli")
+        fake = mock.Mock()
+        fake.communicate.side_effect = [KeyboardInterrupt(), ("", "")]
+        fake.returncode = 0
+        with mock.patch(
+            "deep_reach.backends.opencli.subprocess.Popen", return_value=fake
+        ), mock.patch.object(client, "_kill_tree") as kill:
+            with self.assertRaises(KeyboardInterrupt):
+                client._run(["doctor"], timeout=1, with_profile=False)
+        kill.assert_called_once_with(fake)
+
     def test_handler_normalizes_items(self):
         client = FakeClient()
         register_opencli_backends(client, labels=("opencli-twitter",))

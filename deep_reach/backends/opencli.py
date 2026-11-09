@@ -141,7 +141,7 @@ class OpenCLIClient:
         else:
             try:
                 os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-            except ProcessLookupError:
+            except OSError:
                 pass
 
     def _run(self, argv: list[str], timeout: float, with_profile: bool = True):
@@ -176,6 +176,13 @@ class OpenCLIClient:
             ) from exc
         try:
             stdout, stderr = proc.communicate(timeout=timeout)
+        except KeyboardInterrupt:
+            self._kill_tree(proc)
+            try:
+                proc.communicate(timeout=5)
+            except (subprocess.TimeoutExpired, KeyboardInterrupt):
+                pass
+            raise
         except subprocess.TimeoutExpired as exc:
             self._kill_tree(proc)
             try:

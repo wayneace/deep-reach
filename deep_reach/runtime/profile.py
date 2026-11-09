@@ -29,6 +29,17 @@ def status(keys: Optional[Keys] = None, client: Optional[OpenCLIClient] = None) 
     }
 
 
+def _secure_path(path: Path) -> None:
+    """Tighten the keys file before writing; a chmod failure must not abort."""
+    if os.name == "nt":
+        return
+    try:
+        path.touch(mode=0o600, exist_ok=True)
+        os.chmod(path, 0o600)
+    except OSError:
+        pass
+
+
 def set_context(context_id: str) -> Path:
     path = default_keys_path()
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -49,9 +60,8 @@ def set_context(context_id: str) -> Path:
         )
     else:
         text = text.rstrip() + f'\n\nbrowser:\n  opencli_profile: "{context_id}"\n'
+    _secure_path(path)
     path.write_text(text, encoding="utf-8")
-    if os.name != "nt":
-        os.chmod(path, 0o600)
     return path
 
 

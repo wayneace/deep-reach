@@ -200,7 +200,10 @@ def _decompress(raw: bytes, encoding: str) -> bytes:
     """Decompress gzip/deflate with a hard output cap across all members."""
     encoding = (encoding or "").lower()
     if "deflate" in encoding:
-        output, _ = _decompress_member(raw, -zlib.MAX_WBITS, MAX_DECOMPRESSED)
+        try:
+            output, _ = _decompress_member(raw, zlib.MAX_WBITS, MAX_DECOMPRESSED)
+        except ReachError:
+            output, _ = _decompress_member(raw, -zlib.MAX_WBITS, MAX_DECOMPRESSED)
         return output
     if "gzip" not in encoding:
         return raw
