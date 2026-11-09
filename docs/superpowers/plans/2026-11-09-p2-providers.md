@@ -284,7 +284,7 @@ class TavilyTest(unittest.TestCase):
 
         register_tavily_backends(Keys({"search": {"tavily": {"api_key": "tvly-test"}}}))
         with mock.patch("deep_reach.backends.tavily.p2_fetch_json", side_effect=fake):
-            items = BACKENDS["tavily-search"](
+            items = BACKENDS.get("tavily-search")(
                 action="search",
                 params={"query": "desk", "limit": 5},
                 timeout=5,
@@ -306,7 +306,7 @@ class TavilyTest(unittest.TestCase):
             "deep_reach.backends.tavily.p2_fetch_json",
             return_value={"results": []},
         ):
-            items = BACKENDS["tavily-search"](
+            items = BACKENDS.get("tavily-search")(
                 action="search",
                 params={"query": "desk"},
                 timeout=5,
@@ -323,7 +323,7 @@ class TavilyTest(unittest.TestCase):
 
         register_tavily_backends(Keys({"search": {"tavily": {"api_key": "k"}}}))
         with mock.patch("deep_reach.backends.tavily.p2_fetch_json", side_effect=fake):
-            items = BACKENDS["tavily-extract"](
+            items = BACKENDS.get("tavily-extract")(
                 action="read",
                 params={"target": "https://example.com"},
                 timeout=5,
@@ -339,7 +339,7 @@ class TavilyTest(unittest.TestCase):
             "deep_reach.backends.tavily.p2_fetch_json", return_value={"unexpected": []}
         ):
             with self.assertRaises(ReachError) as ctx:
-                BACKENDS["tavily-search"](
+                BACKENDS.get("tavily-search")(
                     action="search",
                     params={"query": "desk"},
                     timeout=5,
@@ -423,7 +423,7 @@ class BraveTest(unittest.TestCase):
 
         register_brave_backend(Keys({"search": {"brave": {"api_key": "brave-key"}}}))
         with mock.patch("deep_reach.backends.brave.p2_fetch_json", side_effect=fake):
-            items = BACKENDS["brave-search"](
+            items = BACKENDS.get("brave-search")(
                 action="search",
                 params={"query": "desk", "limit": 5},
                 timeout=5,
@@ -440,7 +440,7 @@ class BraveTest(unittest.TestCase):
         register_brave_backend(Keys({"search": {"brave": {"api_key": "k"}}}))
         with mock.patch("deep_reach.backends.brave.p2_fetch_json", return_value={}):
             with self.assertRaises(ReachError) as ctx:
-                BACKENDS["brave-search"](
+                BACKENDS.get("brave-search")(
                     action="search",
                     params={"query": "desk"},
                     timeout=5,
@@ -455,7 +455,7 @@ class BraveTest(unittest.TestCase):
             "deep_reach.backends.brave.p2_fetch_json",
             return_value={"web": {"results": []}},
         ):
-            items = BACKENDS["brave-search"](
+            items = BACKENDS.get("brave-search")(
                 action="search",
                 params={"query": "desk"},
                 timeout=5,
@@ -528,7 +528,7 @@ class FirecrawlTest(unittest.TestCase):
 
         register_firecrawl_backends(Keys({"search": {"firecrawl": {"api_key": "fc"}}}))
         with mock.patch("deep_reach.backends.firecrawl.p2_fetch_json", side_effect=fake):
-            items = BACKENDS["firecrawl-search"](
+            items = BACKENDS.get("firecrawl-search")(
                 action="search",
                 params={"query": "desk", "limit": 5},
                 timeout=5,
@@ -547,7 +547,7 @@ class FirecrawlTest(unittest.TestCase):
             "deep_reach.backends.firecrawl.p2_fetch_json",
             return_value={"success": True, "data": []},
         ):
-            items = BACKENDS["firecrawl-search"](
+            items = BACKENDS.get("firecrawl-search")(
                 action="search",
                 params={"query": "desk"},
                 timeout=5,
@@ -565,7 +565,7 @@ class FirecrawlTest(unittest.TestCase):
 
         register_firecrawl_backends(Keys({"search": {"firecrawl": {"api_key": "fc"}}}))
         with mock.patch("deep_reach.backends.firecrawl.p2_fetch_json", side_effect=fake):
-            items = BACKENDS["firecrawl-scrape"](
+            items = BACKENDS.get("firecrawl-scrape")(
                 action="read",
                 params={"target": "https://example.com"},
                 timeout=5,
@@ -583,7 +583,7 @@ class FirecrawlTest(unittest.TestCase):
             return_value={"success": False, "error": "blocked"},
         ):
             with self.assertRaises(ReachError) as ctx:
-                BACKENDS["firecrawl-scrape"](
+                BACKENDS.get("firecrawl-scrape")(
                     action="read",
                     params={"target": "https://example.com"},
                     timeout=5,
@@ -599,7 +599,7 @@ class FirecrawlTest(unittest.TestCase):
             return_value={"success": True},
         ):
             with self.assertRaises(ReachError) as ctx:
-                BACKENDS["firecrawl-search"](
+                BACKENDS.get("firecrawl-search")(
                     action="search",
                     params={"query": "desk"},
                     timeout=5,
@@ -694,7 +694,7 @@ class BrightDataTest(unittest.TestCase):
 
         register_brightdata_backends(KEYS)
         with mock.patch("deep_reach.backends.brightdata.p2_fetch_json", side_effect=fake):
-            items = BACKENDS["brightdata-serp"](
+            items = BACKENDS.get("brightdata-serp")(
                 action="search",
                 params={"query": "desk organizer", "limit": 5},
                 timeout=5,
@@ -717,7 +717,7 @@ class BrightDataTest(unittest.TestCase):
 
         register_brightdata_backends(KEYS)
         with mock.patch("deep_reach.backends.brightdata.p2_fetch_json", side_effect=fake):
-            items = BACKENDS["brightdata-serp"](
+            items = BACKENDS.get("brightdata-serp")(
                 action="search",
                 params={"query": "desk"},
                 timeout=5,
@@ -733,7 +733,7 @@ class BrightDataTest(unittest.TestCase):
             return_value={"unexpected": []},
         ):
             with self.assertRaises(ReachError) as ctx:
-                BACKENDS["brightdata-serp"](
+                BACKENDS.get("brightdata-serp")(
                     action="search",
                     params={"query": "desk"},
                     timeout=5,
@@ -748,7 +748,7 @@ class BrightDataTest(unittest.TestCase):
             "deep_reach.backends.brightdata.p2_fetch_json",
             return_value={"organic": []},
         ):
-            items = BACKENDS["brightdata-serp"](
+            items = BACKENDS.get("brightdata-serp")(
                 action="search",
                 params={"query": "desk"},
                 timeout=5,
@@ -770,7 +770,7 @@ class BrightDataTest(unittest.TestCase):
 
         register_brightdata_backends(KEYS)
         with mock.patch("deep_reach.backends.brightdata.p2_fetch_json", side_effect=fake):
-            items = BACKENDS["brightdata-unlocker"](
+            items = BACKENDS.get("brightdata-unlocker")(
                 action="read",
                 params={"target": "https://example.com"},
                 timeout=5,
@@ -784,7 +784,7 @@ class BrightDataTest(unittest.TestCase):
     def test_unlocker_rejects_private_url(self):
         register_brightdata_backends(KEYS)
         with self.assertRaises(ReachError) as ctx:
-            BACKENDS["brightdata-unlocker"](
+            BACKENDS.get("brightdata-unlocker")(
                 action="read",
                 params={"target": "http://127.0.0.1/"},
                 timeout=5,
@@ -796,7 +796,7 @@ class BrightDataTest(unittest.TestCase):
     def test_missing_zone_raises_need_setup(self):
         register_brightdata_backends(Keys({"search": {"brightdata": {"api_token": "t"}}}))
         with self.assertRaises(ReachError) as ctx:
-            BACKENDS["brightdata-serp"](
+            BACKENDS.get("brightdata-serp")(
                 action="search",
                 params={"query": "desk"},
                 timeout=5,
