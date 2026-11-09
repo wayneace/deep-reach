@@ -13,7 +13,7 @@ from typing import Optional
 from ..runtime.dispatch import BACKENDS
 from ..runtime.result import (
     NEED_SETUP,
-    RATE_LIMITED,
+    QUOTA_EXHAUSTED,
     TIMEOUT,
     UPSTREAM_BROKEN,
     ReachError,
@@ -46,7 +46,9 @@ class JinaReader:
                     NEED_SETUP, "Jina Reader rejected the key; check search.jina.api_key"
                 ) from exc
             if exc.code == 429:
-                raise ReachError(RATE_LIMITED, "Jina Reader rate limit (429)") from exc
+                raise ReachError(
+                    QUOTA_EXHAUSTED, "Jina Reader free-tier limit reached (429)"
+                ) from exc
             raise ReachError(UPSTREAM_BROKEN, f"Jina Reader HTTP {exc.code}") from exc
         except urllib.error.URLError as exc:
             if isinstance(exc.reason, TimeoutError):
