@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.10.0 — 2026-11-09
 
 - 新增 P2 搜索/阅读后端：Tavily、Brave Search、Firecrawl、Bright Data。
 - 新增 `web search`：Tavily → Brave → Firecrawl → Bright Data，缺 key 自动跳过。
