@@ -1,8 +1,9 @@
 import os
 import unittest
+import urllib.request
 from unittest import mock
 
-from deep_reach.backends.http import validate_url
+from deep_reach.backends.http import _OPENER, _ValidatingRedirectHandler, validate_url
 from deep_reach.runtime.result import BAD_INPUT, ReachError
 
 
@@ -61,6 +62,20 @@ class UrlGuardTest(unittest.TestCase):
                 validate_url("http://127.0.0.1:8080/"), "http://127.0.0.1:8080/"
             )
             self.assert_blocked("file:///etc/passwd")
+
+    def test_redirect_handler_blocks_private_target(self):
+        handler = _ValidatingRedirectHandler()
+        request = urllib.request.Request("https://example.com")
+        with self.assertRaises(ReachError) as ctx:
+            handler.redirect_request(
+                request, None, 302, "Found", {}, "http://127.0.0.1:8080/"
+            )
+        self.assertEqual(ctx.exception.code, BAD_INPUT)
+
+    def test_fetch_opener_uses_validating_redirect_handler(self):
+        self.assertTrue(
+            any(isinstance(handler, _ValidatingRedirectHandler) for handler in _OPENER.handlers)
+        )
 
 
 if __name__ == "__main__":

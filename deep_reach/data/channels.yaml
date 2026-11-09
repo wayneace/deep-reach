@@ -146,14 +146,14 @@ channels:
         requires: login
         params: [limit]
         backends:
-          - {label: xueqiu-api, tier: p0}
+          - {label: xueqiu-api, tier: p0, requires_key: true}
           - {label: opencli-xueqiu, site: xueqiu, command: hot, limit: true}
       hot_stocks:
         description: 雪球热搜股
         requires: login
         params: [limit]
         backends:
-          - {label: xueqiu-api, tier: p0}
+          - {label: xueqiu-api, tier: p0, requires_key: true}
       search:
         description: 搜索股票
         requires: none
@@ -518,13 +518,13 @@ channels:
         requires: key
         params: [query, limit]
         backends:
-          - {label: ebay-api, tier: p0, requires_key: true}
+          - {label: ebay-api, tier: p0, requires_key: true, keys: [official.ebay.client_id, official.ebay.client_secret]}
       read:
         description: 读取商品详情
         requires: key
         params: [target]
         backends:
-          - {label: ebay-api, tier: p0, requires_key: true}
+          - {label: ebay-api, tier: p0, requires_key: true, keys: [official.ebay.client_id, official.ebay.client_secret]}
 
   etsy:
     level: optional
@@ -590,13 +590,13 @@ channels:
         requires: key
         params: [query, limit]
         backends:
-          - {label: epo-ops, tier: p0, requires_key: true}
+          - {label: epo-ops, tier: p0, requires_key: true, keys: [official.epo.consumer_key, official.epo.consumer_secret]}
       read:
         description: 按公开号读取
         requires: key
         params: [target]
         backends:
-          - {label: epo-ops, tier: p0, requires_key: true}
+          - {label: epo-ops, tier: p0, requires_key: true, keys: [official.epo.consumer_key, official.epo.consumer_secret]}
 
   # ── planned: roadmap only ───────────────────────────────
   kipris:

@@ -185,24 +185,27 @@ def run_action(
             )
 
         for spec in action.backends:
-            key_path = spec.key or channel.key_path
-            if spec.requires_key and not key_path:
-                attempts.append(_attempt(spec, NEED_SETUP))
-                errors.append(
-                    ReachError(
-                        NEED_SETUP,
-                        f"{spec.label} requires a key but no key path is configured",
+            if spec.requires_key:
+                key_paths = spec.required_keys(channel)
+                if any(not path for path in key_paths):
+                    attempts.append(_attempt(spec, NEED_SETUP))
+                    errors.append(
+                        ReachError(
+                            NEED_SETUP,
+                            f"{spec.label} requires a key but no key path is configured",
+                        )
                     )
-                )
-                continue
-            if spec.requires_key and key_path and not keys.has(key_path):
-                attempts.append(_attempt(spec, KEY_MISSING))
-                errors.append(
-                    ReachError(
-                        KEY_MISSING, f"{key_path} is missing; skipping {spec.label}"
+                    continue
+                missing = [
+                    path for path in key_paths if path and not keys.has(path)
+                ]
+                if missing:
+                    message = f"{', '.join(missing)} missing; skipping {spec.label}"
+                    attempts.append(
+                        _attempt(spec, KEY_MISSING, message=message)
                     )
-                )
-                continue
+                    errors.append(ReachError(KEY_MISSING, message))
+                    continue
 
             paused = health.backend_pause(
                 channel.name, action_name, spec.label, fingerprint

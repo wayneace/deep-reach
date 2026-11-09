@@ -229,6 +229,6 @@ MIT，见 [LICENSE](LICENSE)。第三方说明见 [NOTICE](NOTICE)。
 - 只读；不替用户登录；不索要密码。
 - 不接付费 API；免费层用完自动降级。
 - 不自建爬虫集群；P2 只调用第三方公开服务。
-- `web read` 默认只访问 http/https 公网地址；localhost、回环、私有网段、链路本地地址会被拒绝。确实需要访问内网时，显式设置 `DEEP_REACH_ALLOW_PRIVATE_URLS=1`。
+- `web read` 默认只访问 http/https 公网地址；localhost、回环、私有网段、链路本地地址会被拒绝，重定向目标也会重新校验。确实需要访问内网时，显式设置 `DEEP_REACH_ALLOW_PRIVATE_URLS=1`。
 - 不承诺完整评论树、不承诺理解图片/视频。
 - 平台页面改版或风控会导致渠道暂时不可用；`doctor` 会标明。

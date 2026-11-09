@@ -79,6 +79,27 @@ class DispatchTest(unittest.TestCase):
         self.assertEqual(env["backend"], "fallback")
         self.assertEqual(env["meta"]["attempts"][0]["result"], "KEY_MISSING")
 
+    def test_partial_multi_key_skips_keyed_backend(self):
+        BACKENDS.register("multi", lambda **kw: [{"title": "should not run"}])
+        BACKENDS.register("fallback", lambda **kw: [{"title": "fallback"}])
+        channel = self._channel(
+            [
+                BackendSpec(
+                    "multi",
+                    "search",
+                    requires_key=True,
+                    keys=("official.test.a", "official.test.b"),
+                ),
+                BackendSpec("fallback", "search"),
+            ]
+        )
+        keys = Keys({"official": {"test": {"a": "one"}}})
+        env = run_action(channel, "search", {"query": "x"}, keys=keys)
+        self.assertTrue(env["ok"])
+        self.assertEqual(env["backend"], "fallback")
+        self.assertEqual(env["meta"]["attempts"][0]["result"], "KEY_MISSING")
+        self.assertIn("official.test.b", env["meta"]["attempts"][0]["message"])
+
     def test_bad_param_returns_envelope(self):
         channel = self._channel([BackendSpec("ok", "search")])
         env = run_action(channel, "search", {}, keys=Keys({}))

@@ -134,6 +134,20 @@ def _ssl_context() -> ssl.SSLContext:
 SSL_CONTEXT = _ssl_context()
 
 
+class _ValidatingRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Re-validate every redirect target, not just the initial URL."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        validate_url(newurl)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+_OPENER = urllib.request.build_opener(
+    urllib.request.HTTPSHandler(context=SSL_CONTEXT),
+    _ValidatingRedirectHandler(),
+)
+
+
 @dataclass
 class Response:
     url: str
@@ -186,9 +200,7 @@ def fetch(
         method=method or ("POST" if data is not None else "GET"),
     )
     try:
-        with urllib.request.urlopen(
-            request, timeout=timeout, context=SSL_CONTEXT
-        ) as response:
+        with _OPENER.open(request, timeout=timeout) as response:
             raw = response.read(MAX_BODY)
             encoding = (response.headers.get("Content-Encoding") or "").lower()
             if "gzip" in encoding:

@@ -51,6 +51,11 @@ class BackendSpec:
     key: Optional[str] = None
     tier: str = "p1"
     options: dict = field(default_factory=dict)
+    keys: tuple[str, ...] = ()
+
+    def required_keys(self, channel: "Channel") -> tuple[Optional[str], ...]:
+        """Every key path this backend needs; falls back to the legacy single key."""
+        return self.keys or ((self.key or channel.key_path),)
 
 
 @dataclass(frozen=True)

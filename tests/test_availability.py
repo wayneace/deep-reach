@@ -1,5 +1,6 @@
 import unittest
 
+from deep_reach.channels import load_registry
 from deep_reach.channels.base import Action, BackendSpec, Channel, Param
 from deep_reach.runtime.availability import (
     Environment,
@@ -89,6 +90,46 @@ class AvailabilityTest(unittest.TestCase):
             env(),
         )
         self.assertEqual(result.status, "experimental")
+
+    def test_xueqiu_hot_requires_cookie(self):
+        xueqiu = load_registry().visible["xueqiu"]
+        result = channel_availability(xueqiu, env(installed=False))
+        self.assertNotIn("hot", result.available_actions)
+        self.assertNotIn("hot_stocks", result.available_actions)
+        self.assertIn("quote", result.available_actions)
+
+    def test_partial_multi_key_is_needs_key(self):
+        ebay = load_registry().visible["ebay"]
+        partial = Environment(
+            keys=Keys({"official": {"ebay": {"client_id": "id"}}}),
+            opencli_installed=False,
+        )
+        self.assertEqual(channel_availability(ebay, partial).status, "needs_key")
+        full = Environment(
+            keys=Keys(
+                {"official": {"ebay": {"client_id": "id", "client_secret": "secret"}}}
+            ),
+            opencli_installed=False,
+        )
+        self.assertEqual(channel_availability(ebay, full).status, "ready")
+
+    def test_multi_key_channel_requires_every_key(self):
+        ch = channel(
+            "needs_key",
+            [
+                BackendSpec(
+                    "demo-api",
+                    "search",
+                    tier="p0",
+                    requires_key=True,
+                    keys=("official.demo.a", "official.demo.b"),
+                )
+            ],
+        )
+        partial = Environment(
+            keys=Keys({"official": {"demo": {"a": "one"}}}), opencli_installed=False
+        )
+        self.assertEqual(channel_availability(ch, partial).status, "needs_key")
 
 
 if __name__ == "__main__":

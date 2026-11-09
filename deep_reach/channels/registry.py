@@ -104,10 +104,21 @@ def _backend(value: Any, action_name: str) -> BackendSpec:
                 f"backend {label!r}: unknown tier {tier!r}; use one of p0, p1, p2"
             )
         key = value.get("key")
+        raw_keys = value.get("keys")
+        if raw_keys is None:
+            keys: tuple[str, ...] = ()
+        elif isinstance(raw_keys, str):
+            keys = (raw_keys,)
+        elif isinstance(raw_keys, (list, tuple)):
+            keys = tuple(str(item) for item in raw_keys)
+        else:
+            raise ValueError(
+                f"backend {label!r}: keys must be a string or a list of strings"
+            )
         options = {
             field: val
             for field, val in value.items()
-            if field not in {"label", "method", "requires_key", "tier", "key"}
+            if field not in {"label", "method", "requires_key", "tier", "key", "keys"}
         }
         return BackendSpec(
             label=label,
@@ -116,6 +127,7 @@ def _backend(value: Any, action_name: str) -> BackendSpec:
             key=str(key) if key else None,
             tier=tier,
             options=options,
+            keys=keys,
         )
     raise ValueError(f"invalid backend entry: {value!r}")
 

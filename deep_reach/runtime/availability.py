@@ -83,12 +83,13 @@ def environment_from_profile(keys: Keys, profile: dict) -> Environment:
 def backend_unavailable_reason(
     spec: BackendSpec, channel: Channel, env: Environment
 ) -> Optional[str]:
-    key_path = spec.key or channel.key_path
     if spec.requires_key:
-        if not key_path:
+        key_paths = spec.required_keys(channel)
+        if any(not path for path in key_paths):
             return "requires a key but no key path is configured"
-        if not env.keys.has(key_path):
-            return f"{key_path} is missing"
+        missing = [path for path in key_paths if path and not env.keys.has(path)]
+        if missing:
+            return f"{', '.join(missing)} missing"
     if spec.label.startswith("opencli-") and not env.opencli_available:
         if not env.opencli_installed:
             return "OpenCLI is not installed"
