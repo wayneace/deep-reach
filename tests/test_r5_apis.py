@@ -3,10 +3,16 @@ from unittest import mock
 
 from deep_reach.backends.ebay import _item_ref, _item_summary
 from deep_reach.backends.etsy import _listing, _listing_id, _price
-from deep_reach.backends.producthunt import _node_item
+from deep_reach.backends.producthunt import _map_error, _node_item
 from deep_reach.channels import load_registry
 from deep_reach.runtime import quota
-from deep_reach.runtime.result import BAD_INPUT, QUOTA_EXHAUSTED, ReachError
+from deep_reach.runtime.result import (
+    BAD_INPUT,
+    QUOTA_EXHAUSTED,
+    RATE_LIMITED,
+    UPSTREAM_BROKEN,
+    ReachError,
+)
 
 
 class EbayParseTest(unittest.TestCase):
@@ -77,6 +83,14 @@ class ProductHuntParseTest(unittest.TestCase):
         item = _node_item(node)
         self.assertEqual(item["source"], "producthunt")
         self.assertEqual(item["metrics"]["votes"], 42)
+
+    def test_error_mapping_does_not_match_moderated(self):
+        err = _map_error(ReachError(UPSTREAM_BROKEN, "post was moderated"))
+        self.assertEqual(err.code, UPSTREAM_BROKEN)
+
+    def test_error_mapping_matches_rate_limit(self):
+        err = _map_error(ReachError(UPSTREAM_BROKEN, "rate limit exceeded"))
+        self.assertEqual(err.code, RATE_LIMITED)
 
 
 class QuotaTest(unittest.TestCase):

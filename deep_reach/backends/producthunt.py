@@ -49,7 +49,13 @@ def _map_error(exc: ReachError) -> ReachError:
     lowered = exc.message.lower()
     if "unauthorized" in lowered or "invalid token" in lowered or "access token" in lowered:
         return ReachError(KEY_MISSING, exc.message)
-    if "rate" in lowered or "throttle" in lowered or "429" in lowered:
+    if (
+        "rate limit" in lowered
+        or "ratelimit" in lowered
+        or "throttl" in lowered
+        or "too many requests" in lowered
+        or "429" in lowered
+    ):
         return ReachError(RATE_LIMITED, exc.message)
     return exc
 

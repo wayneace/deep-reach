@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 import re
 import shutil
+import signal
 import subprocess
 from typing import Optional
 
@@ -138,7 +139,10 @@ class OpenCLIClient:
                 capture_output=True,
             )
         else:
-            proc.kill()
+            try:
+                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+            except ProcessLookupError:
+                pass
 
     def _run(self, argv: list[str], timeout: float, with_profile: bool = True):
         env = os.environ.copy()
@@ -163,6 +167,7 @@ class OpenCLIClient:
                 encoding="utf-8",
                 errors="replace",
                 env=env,
+                start_new_session=os.name != "nt",
             )
         except FileNotFoundError as exc:
             raise ReachError(

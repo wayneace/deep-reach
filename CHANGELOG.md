@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- POSIX 下 `keys.yaml` 写入后收紧为 `0600`。
+- POSIX 下 OpenCLI 超时改为杀掉整个进程组，避免 wrapper 留下 node 子进程。
+- gzip/deflate 解压增加 10MB 输出上限，拒绝压缩炸弹和截断流。
+- Product Hunt 错误映射不再把 `moderated` 等普通错误误判为 `RATE_LIMITED`。
+
 ## v0.9.0 — 2026-11-09
 
 P0 加固与发布收尾。

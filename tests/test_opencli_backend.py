@@ -1,5 +1,8 @@
+import os
+import signal
 import unittest
 from types import SimpleNamespace
+from unittest import mock
 
 from deep_reach.backends.opencli import (
     OpenCLIClient,
@@ -58,6 +61,30 @@ class OpenCLIBackendTest(unittest.TestCase):
         with self.assertRaises(ReachError) as ctx:
             client.run("twitter", "post", [], timeout=5)
         self.assertEqual(ctx.exception.code, WRITE_BLOCKED)
+
+    def test_posix_kill_tree_uses_process_group(self):
+        if os.name == "nt":
+            self.skipTest("POSIX only")
+        client = OpenCLIClient(bin_path="fake-opencli")
+        proc = mock.Mock(pid=1234)
+        with mock.patch(
+            "deep_reach.backends.opencli.os.getpgid", return_value=1234
+        ), mock.patch("deep_reach.backends.opencli.os.killpg") as killpg:
+            client._kill_tree(proc)
+        killpg.assert_called_once_with(1234, signal.SIGKILL)
+
+    def test_run_starts_new_session_on_posix(self):
+        if os.name == "nt":
+            self.skipTest("POSIX only")
+        client = OpenCLIClient(bin_path="fake-opencli")
+        fake = mock.Mock()
+        fake.communicate.return_value = ("", "")
+        fake.returncode = 0
+        with mock.patch(
+            "deep_reach.backends.opencli.subprocess.Popen", return_value=fake
+        ) as popen:
+            client._run(["doctor"], timeout=1, with_profile=False)
+        self.assertTrue(popen.call_args.kwargs.get("start_new_session"))
 
     def test_handler_normalizes_items(self):
         client = FakeClient()

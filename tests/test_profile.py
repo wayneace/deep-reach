@@ -36,6 +36,15 @@ class ProfileTest(unittest.TestCase):
             self.assertIn("token: abc", text)
             self.assertIn('opencli_profile: "ctx-123"', text)
 
+    def test_set_context_restricts_keys_file_permissions(self):
+        if os.name == "nt":
+            self.skipTest("POSIX permissions only")
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "keys.yaml"
+            os.environ["DEEP_REACH_KEYS_FILE"] = str(path)
+            set_context("ctx-123")
+            self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+
 
 if __name__ == "__main__":
     unittest.main()

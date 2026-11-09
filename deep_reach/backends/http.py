@@ -7,7 +7,6 @@ GET; pages that need JavaScript fall through to the P2 reader.
 from __future__ import annotations
 
 import functools
-import gzip
 import html
 import ipaddress
 import json
@@ -39,6 +38,7 @@ USER_AGENT = (
     "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 )
 MAX_BODY = 5_000_000
+MAX_DECOMPRESSED = 10_000_000
 PRIVATE_URL_ENV = "DEEP_REACH_ALLOW_PRIVATE_URLS"
 _TRUTHY = {"1", "true", "yes", "on"}
 #: Transparent proxies sometimes resolve public hostnames into these
@@ -178,6 +178,25 @@ def _decode(raw: bytes, charset: Optional[str]) -> str:
     return raw.decode("utf-8", errors="replace")
 
 
+def _decompress(raw: bytes, encoding: str) -> bytes:
+    """Decompress gzip/deflate with a hard output cap."""
+    encoding = (encoding or "").lower()
+    if "gzip" in encoding:
+        wbits = 16 + zlib.MAX_WBITS
+    elif "deflate" in encoding:
+        wbits = -zlib.MAX_WBITS
+    else:
+        return raw
+    decompressor = zlib.decompressobj(wbits)
+    output = decompressor.decompress(raw, MAX_DECOMPRESSED)
+    if decompressor.unconsumed_tail or not decompressor.eof:
+        raise ReachError(
+            UPSTREAM_BROKEN,
+            "response is too large after decompression",
+        )
+    return output
+
+
 def _http_code(status: int) -> str:
     if status == 404:
         return NOT_FOUND
@@ -212,11 +231,9 @@ def fetch(
     try:
         with _OPENER.open(request, timeout=timeout) as response:
             raw = response.read(MAX_BODY)
-            encoding = (response.headers.get("Content-Encoding") or "").lower()
-            if "gzip" in encoding:
-                raw = gzip.decompress(raw)
-            elif "deflate" in encoding:
-                raw = zlib.decompress(raw, -zlib.MAX_WBITS)
+            raw = _decompress(
+                raw, response.headers.get("Content-Encoding") or ""
+            )
             content_type = response.headers.get("Content-Type") or ""
             charset = response.headers.get_content_charset()
             return Response(

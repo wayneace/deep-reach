@@ -50,6 +50,8 @@ def set_context(context_id: str) -> Path:
     else:
         text = text.rstrip() + f'\n\nbrowser:\n  opencli_profile: "{context_id}"\n'
     path.write_text(text, encoding="utf-8")
+    if os.name != "nt":
+        os.chmod(path, 0o600)
     return path
 
 
