@@ -8,30 +8,22 @@ from ..backends.opencli import RECOMMENDED_VERSION, OpenCLIClient, version_statu
 from ..channels.base import TIERS
 from ..channels.registry import Registry
 from . import health, quota
+from .availability import ChannelAvailability, channel_availability, environment_from_profile
 from .keys import Keys
 from .result import ReachError
 
 LEVEL_ORDER = ("default", "optional", "experimental")
 
 
-def _channel_status(channel, keys: Keys) -> str:
-    status = channel.status
-    if status == "planned":
-        return status
-    if channel.requires_key and channel.key_path and not keys.has(channel.key_path):
-        has_fallback = any(
-            not backend.requires_key
-            for action in channel.actions
-            for backend in action.backends
-        )
-        if not has_fallback:
-            return "needs_key"
-        if status == "ready":
-            return "degraded"
-    return status
-
-
-def _next_action(channel, status: str) -> str:
+def _next_action(
+    channel, status: str, availability: ChannelAvailability
+) -> str:
+    if status == "needs_setup":
+        base = "安装/启用 OpenCLI Browser Bridge，然后运行 `deep-reach doctor`"
+        return f"{base}；或 {channel.next_action}" if channel.next_action else base
+    if status == "degraded":
+        names = ", ".join(availability.unavailable_actions)
+        return f"部分动作当前不可用（{names}）；运行 `deep-reach doctor` 查看原因"
     if channel.next_action:
         return channel.next_action
     if status == "needs_login":
@@ -61,14 +53,20 @@ def build_doctor_report(
         }
 
     profile = client.profile_status()
+    env = environment_from_profile(keys, profile)
     rows = []
     for channel in registry.visible.values():
-        status = _channel_status(channel, keys)
+        availability = channel_availability(channel, env)
+        status = availability.status
         rows.append(
             {
                 "name": channel.name,
                 "level": channel.level,
                 "status": status,
+                "declared_status": channel.status,
+                "runnable": availability.runnable,
+                "available_actions": list(availability.available_actions),
+                "unavailable_actions": availability.unavailable_actions,
                 "category": channel.category,
                 "description": channel.description,
                 "key": channel.key_path,
@@ -84,7 +82,7 @@ def build_doctor_report(
                 },
                 "limits": channel.limits,
                 "not_supported": list(channel.not_supported),
-                "next_action": _next_action(channel, status),
+                "next_action": _next_action(channel, status, availability),
             }
         )
 
@@ -96,10 +94,12 @@ def build_doctor_report(
         "visible": len(rows),
         "ready": sum(1 for r in rows if r["status"] == "ready"),
         "degraded": sum(1 for r in rows if r["status"] == "degraded"),
+        "needs_setup": sum(1 for r in rows if r["status"] == "needs_setup"),
         "needs_login": sum(1 for r in rows if r["status"] == "needs_login"),
         "needs_key": sum(1 for r in rows if r["status"] == "needs_key"),
         "experimental": sum(1 for r in rows if r["status"] == "experimental"),
         "planned": len(planned),
+        "runnable": sum(1 for r in rows if r["runnable"]),
         "tiers": {
             tier: sum(1 for row in rows if tier in row["tiers"]) for tier in TIERS
         },
@@ -173,10 +173,13 @@ def format_doctor_text(report: dict) -> str:
     lines.append(
         f"{summary.get('visible', 0)} visible; "
         f"{summary.get('ready', 0)} ready; "
+        f"{summary.get('degraded', 0)} degraded; "
+        f"{summary.get('needs_setup', 0)} need setup; "
         f"{summary.get('needs_login', 0)} need login; "
         f"{summary.get('needs_key', 0)} need key; "
         f"{summary.get('experimental', 0)} experimental; "
-        f"{summary.get('planned', 0)} planned"
+        f"{summary.get('planned', 0)} planned; "
+        f"{summary.get('runnable', 0)} runnable now"
     )
     lines.append(
         f"tiers:    p0 {tiers.get('p0', 0)} / p1 {tiers.get('p1', 0)} / "

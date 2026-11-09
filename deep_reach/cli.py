@@ -37,6 +37,7 @@ from .product import LEVELS, NAME, NON_GOALS, PROMISES, TAGLINE, TIER_TABLE
 from .runtime import health as health_state
 from .runtime import quota as quota_state
 from .runtime import state as state_store
+from .runtime.availability import channel_availability, detect_environment
 from .runtime.dispatch import run_action
 from .runtime.doctor import build_doctor_report, format_doctor_text
 from .runtime.keys import Keys, default_keys_path
@@ -185,20 +186,28 @@ def cmd_doctor(args: argparse.Namespace) -> int:
 def cmd_channels(args: argparse.Namespace) -> int:
     try:
         registry = load_registry()
+        keys = _load_keys()
     except ReachError as exc:
         print(f"CONFIG_ERROR: {exc.message}", file=sys.stderr)
         return 2
+    env = detect_environment(keys)
     channels = registry.all() if args.all else registry.visible
     if args.json:
-        payload = {
-            "channels": [
+        rows = []
+        for channel in channels.values():
+            availability = channel_availability(channel, env)
+            rows.append(
                 {
-                    "name": c.name,
-                    "level": c.level,
-                    "status": c.status,
-                    "category": c.category,
-                    "description": c.description,
-                    "tiers": list(c.tiers),
+                    "name": channel.name,
+                    "level": channel.level,
+                    "status": availability.status,
+                    "declared_status": availability.declared_status,
+                    "runnable": availability.runnable,
+                    "available_actions": list(availability.available_actions),
+                    "unavailable_actions": availability.unavailable_actions,
+                    "category": channel.category,
+                    "description": channel.description,
+                    "tiers": list(channel.tiers),
                     "actions": [
                         {
                             "name": a.name,
@@ -206,16 +215,14 @@ def cmd_channels(args: argparse.Namespace) -> int:
                             "tiers": list(a.tiers),
                             "description": a.description,
                         }
-                        for a in c.actions
+                        for a in channel.actions
                     ],
-                    "limits": c.limits,
-                    "not_supported": list(c.not_supported),
-                    "next_action": c.next_action,
+                    "limits": channel.limits,
+                    "not_supported": list(channel.not_supported),
+                    "next_action": channel.next_action,
                 }
-                for c in channels.values()
-            ]
-        }
-        _print_json(payload, pretty=True)
+            )
+        _print_json({"channels": rows}, pretty=True)
         return 0
 
     for level in ("default", "optional", "experimental", "planned"):
@@ -224,12 +231,19 @@ def cmd_channels(args: argparse.Namespace) -> int:
             continue
         print(level.upper())
         for channel in sorted(rows, key=lambda c: c.name):
+            availability = channel_availability(channel, env)
             actions = ", ".join(a.name for a in channel.actions) or "-"
-            print(f"  {channel.name:<14} {channel.status:<13} {actions}")
-            if channel.next_action and channel.status != "ready":
-                print(f"      → {channel.next_action}")
+            print(f"  {channel.name:<14} {availability.status:<13} {actions}")
+            hint = channel.next_action
+            if availability.status == "needs_setup":
+                hint = "安装/启用 OpenCLI Browser Bridge 后可用" + (
+                    f"；{hint}" if hint else ""
+                )
+            if availability.status not in {"ready", "experimental"} and hint:
+                print(f"      → {hint}")
         print()
     print("Use `deep-reach <channel> <action> --help` for arguments.")
+    print("Status is environment-aware; run `deep-reach doctor` for browser/key details.")
     return 0
 
 
