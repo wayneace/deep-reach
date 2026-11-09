@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.10.1 — 2026-11-09
+
+- 修正两个 key 提示测试在 Windows 上使用 POSIX 路径字面量导致 CI 失败；功能无变化。
+
 ## v0.10.0 — 2026-11-09
 
 - 新增 P2 搜索/阅读后端：Tavily、Brave Search、Firecrawl、Bright Data。

@@ -179,15 +179,16 @@ class AvailabilityTest(unittest.TestCase):
                 ),
             ),
         )
+        key_path = Path("/nonexistent/deep-reach-keys.yaml")
         environment = Environment(
-            keys=Keys({}, path=Path("/nonexistent/deep-reach-keys.yaml")),
+            keys=Keys({}, path=key_path),
             opencli_installed=True,
             browser_connected=True,
         )
         result = channel_availability(ch, environment)
         self.assertEqual(result.status, "degraded")
         hint = next_action_for(ch, result, environment)
-        self.assertIn("/nonexistent/deep-reach-keys.yaml", hint)
+        self.assertIn(str(key_path), hint)
         self.assertIn("keys.example.yaml", hint)
 
     def test_next_action_for_needs_key_gives_keys_file_and_template(self):
@@ -197,13 +198,14 @@ class AvailabilityTest(unittest.TestCase):
         )
         ch.key_path = "official.demo.api_key"
         ch.next_action = "申请 demo key"
+        key_path = Path("/tmp/deep-reach-keys.yaml")
         environment = Environment(
-            keys=Keys({}, path=Path("/tmp/deep-reach-keys.yaml")),
+            keys=Keys({}, path=key_path),
             opencli_installed=False,
         )
         result = channel_availability(ch, environment)
         hint = next_action_for(ch, result, environment)
-        self.assertIn("/tmp/deep-reach-keys.yaml", hint)
+        self.assertIn(str(key_path), hint)
         self.assertIn("keys.example.yaml", hint)
         self.assertIn("申请 demo key", hint)
 
