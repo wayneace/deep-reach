@@ -133,6 +133,10 @@ class ReliabilityTest(unittest.TestCase):
         )
 
     def test_pacing_waits_between_searches(self):
+        # Start the clock before the state write: writing state time is part of
+        # the elapsed work, while the timestamp is set inside the write. This
+        # keeps the assertion stable on slow CI runners.
+        started = time.monotonic()
         state.mutate(
             lambda data: data.setdefault("request_starts", {}).__setitem__(
                 "test", time.time()
@@ -140,9 +144,8 @@ class ReliabilityTest(unittest.TestCase):
         )
         clock = Clock(5)
         with mock.patch("deep_reach.runtime.limits.BROWSER_SEARCH_INTERVAL", 0.2):
-            started = time.monotonic()
             pace("test", "search", clock)
-            elapsed = time.monotonic() - started
+        elapsed = time.monotonic() - started
         self.assertGreaterEqual(elapsed, 0.15)
 
     def test_site_request_limit_is_shared_across_callers(self):
