@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import json
 import shutil
+from importlib import resources
 import subprocess
 import sys
 from pathlib import Path
@@ -444,6 +445,8 @@ def cmd_setup(args: argparse.Namespace) -> int:
         print(f"CONFIG_ERROR: {exc.message}", file=sys.stderr)
         return 2
     checks.append(("keys", str(keys.path), "ok" if keys.path and keys.path.exists() else "missing (optional)"))
+    template = resources.files("deep_reach.data").joinpath("keys.example.yaml")
+    checks.append(("template", str(template), "ok" if template.is_file() else "missing"))
 
     profile = profile_status(keys)
     connected = bool(profile.get("opencli", {}).get("connected"))
@@ -466,7 +469,7 @@ def cmd_setup(args: argparse.Namespace) -> int:
         print("  2. chrome://extensions → enable")
         print("  3. deep-reach doctor")
     elif not (keys.path and keys.path.exists()):
-        print("Next: copy config/keys.example.yaml to ~/.deep-reach/keys.yaml (all keys optional).")
+        print(f"Next: copy {template} to {keys.path} (all keys optional).")
     else:
         print("Next: deep-reach doctor")
     return 0

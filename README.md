@@ -78,7 +78,7 @@ uv run deep-reach tiers --json
 ## 渠道分级
 
 ```bash
-uv run deep-reach channels      # 默认只显示可用的渠道
+uv run deep-reach channels      # 默认显示已实现渠道；每行 status 是当前环境实测值
 uv run deep-reach roadmap       # 尚未实现的渠道
 uv run deep-reach capabilities  # 每个渠道能做什么、不能做什么
 ```
@@ -151,13 +151,13 @@ uv run python scripts/smoke.py
 ~/.deep-reach/keys.yaml
 ```
 
-模板：
+模板（随 wheel 打包）：
 
 ```text
-config/keys.example.yaml
+deep_reach/data/keys.example.yaml
 ```
 
-所有 key 都是可选的。缺失时对应后端禁用或降级，不阻塞其他渠道。
+运行 `deep-reach setup` 会打印当前安装里的模板绝对路径。所有 key 都是可选的；缺失时对应后端禁用或降级，不阻塞其他渠道。
 
 GitHub token 可选：有 token 5,000 req/h，没有 60 req/h。  
 YouTube Data API key 可选：有 key 走 P0，没有 key 自动走 OpenCLI。  
@@ -197,11 +197,10 @@ deep_reach/
                 # P1: opencli.py；P2: jina.py
   runtime/      # dispatch / result / keys / doctor / profile / clock / state / health / limits / quota
   data/
-    channels.yaml   # 精选渠道 + backend tier（随 wheel 打包）
+    channels.yaml       # 精选渠道 + backend tier（随 wheel 打包）
+    keys.example.yaml   # key 模板（随 wheel 打包）
   product.py    # 产品承诺与分层
   cli.py        # deep-reach <channel> <action>
-config/
-  keys.example.yaml  # key 模板
 skill/
   SKILL.md                  # agent 使用说明
   references/capabilities.md # 能力契约
@@ -229,5 +228,6 @@ MIT，见 [LICENSE](LICENSE)。第三方说明见 [NOTICE](NOTICE)。
 - 只读；不替用户登录；不索要密码。
 - 不接付费 API；免费层用完自动降级。
 - 不自建爬虫集群；P2 只调用第三方公开服务。
+- `web read` 默认只访问 http/https 公网地址；localhost、回环、私有网段、链路本地地址会被拒绝。确实需要访问内网时，显式设置 `DEEP_REACH_ALLOW_PRIVATE_URLS=1`。
 - 不承诺完整评论树、不承诺理解图片/视频。
 - 平台页面改版或风控会导致渠道暂时不可用；`doctor` 会标明。

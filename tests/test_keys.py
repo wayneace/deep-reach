@@ -68,5 +68,17 @@ class KeysTest(unittest.TestCase):
             self.assertEqual(ctx.exception.code, CONFIG_ERROR)
 
 
+class PackagedTemplateTest(unittest.TestCase):
+    def test_keys_template_is_packaged(self):
+        from importlib import resources
+
+        template = resources.files("deep_reach.data").joinpath("keys.example.yaml")
+        self.assertTrue(template.is_file())
+        text = template.read_text(encoding="utf-8")
+        self.assertIn("official:", text)
+        self.assertIn("xueqiu:", text)
+        self.assertIn("browser:", text)
+
+
 if __name__ == "__main__":
     unittest.main()

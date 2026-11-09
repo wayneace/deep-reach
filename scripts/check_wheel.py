@@ -19,6 +19,7 @@ import yaml
 
 EXPECTED_VISIBLE = 21
 REGISTRY_SUFFIX = "deep_reach/data/channels.yaml"
+KEYS_TEMPLATE_SUFFIX = "deep_reach/data/keys.example.yaml"
 
 
 def main() -> int:
@@ -37,6 +38,23 @@ def main() -> int:
             )
             return 1
         data = yaml.safe_load(archive.read(matches[0])) or {}
+        keys_matches = [
+            name for name in archive.namelist() if name.endswith(KEYS_TEMPLATE_SUFFIX)
+        ]
+        if len(keys_matches) != 1:
+            print(
+                f"{wheel}: expected one {KEYS_TEMPLATE_SUFFIX}, "
+                f"found {len(keys_matches)}",
+                file=sys.stderr,
+            )
+            return 1
+        keys_template = yaml.safe_load(archive.read(keys_matches[0])) or {}
+        if not isinstance(keys_template, dict) or "official" not in keys_template:
+            print(
+                f"{wheel}: {KEYS_TEMPLATE_SUFFIX} is not a keys template",
+                file=sys.stderr,
+            )
+            return 1
 
     channels = {
         str(name): (spec or {}) for name, spec in (data.get("channels") or {}).items()
@@ -57,7 +75,8 @@ def main() -> int:
         return 1
 
     print(
-        f"{wheel}: {len(visible)} visible + {len(planned)} planned channels packaged"
+        f"{wheel}: {len(visible)} visible + {len(planned)} planned channels "
+        "+ keys template packaged"
     )
     return 0
 
