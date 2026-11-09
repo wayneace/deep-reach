@@ -6,10 +6,14 @@ GET; pages that need JavaScript fall through to the P2 reader.
 
 from __future__ import annotations
 
+import functools
 import gzip
 import html
+import ipaddress
 import json
+import os
 import re
+import socket
 import ssl
 import urllib.error
 import urllib.parse
@@ -21,6 +25,7 @@ from typing import Any, Optional
 from ..channels.base import BackendSpec, Channel
 from ..runtime.dispatch import BACKENDS
 from ..runtime.result import (
+    BAD_INPUT,
     NOT_FOUND,
     RATE_LIMITED,
     TIMEOUT,
@@ -34,6 +39,77 @@ USER_AGENT = (
     "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 )
 MAX_BODY = 5_000_000
+PRIVATE_URL_ENV = "DEEP_REACH_ALLOW_PRIVATE_URLS"
+_TRUTHY = {"1", "true", "yes", "on"}
+#: Transparent proxies sometimes resolve public hostnames into these
+#: benchmarking ranges. They are not routable on the public internet, so
+#: allowing them keeps public reading working behind such proxies without
+#: opening loopback, RFC1918, link-local or CGNAT addresses.
+_ALLOWED_NON_GLOBAL = (
+    ipaddress.ip_network("198.18.0.0/15"),
+    ipaddress.ip_network("2001:2::/48"),
+)
+
+
+def _allow_private() -> bool:
+    return os.environ.get(PRIVATE_URL_ENV, "").strip().lower() in _TRUTHY
+
+
+def _is_ip_literal(host: str) -> bool:
+    try:
+        ipaddress.ip_address(host.split("%", 1)[0])
+    except ValueError:
+        return False
+    return True
+
+
+def _is_public_ip(text: str) -> bool:
+    try:
+        address = ipaddress.ip_address(str(text).split("%", 1)[0])
+    except ValueError:
+        return False
+    if getattr(address, "ipv4_mapped", None):
+        address = address.ipv4_mapped
+    if any(address in network for network in _ALLOWED_NON_GLOBAL):
+        return True
+    return address.is_global
+
+
+@functools.lru_cache(maxsize=256)
+def _host_is_private(host: str) -> bool:
+    lowered = host.lower()
+    if lowered == "localhost" or lowered.endswith(".localhost"):
+        return True
+    if _is_ip_literal(host):
+        return not _is_public_ip(host)
+    try:
+        infos = socket.getaddrinfo(host, None)
+    except OSError:
+        # The real request will report a network error; do not turn a DNS
+        # failure into a policy failure.
+        return False
+    return any(not _is_public_ip(info[4][0]) for info in infos)
+
+
+def validate_url(url: str) -> str:
+    """Allow only public http(s) URLs; private addresses need an explicit opt-in."""
+    parsed = urllib.parse.urlparse(url)
+    scheme = parsed.scheme.lower()
+    if scheme not in {"http", "https"}:
+        raise ReachError(
+            BAD_INPUT,
+            f"only http/https URLs are supported, got {scheme or 'no scheme'!r}",
+        )
+    host = parsed.hostname
+    if not host:
+        raise ReachError(BAD_INPUT, f"URL has no host: {url!r}")
+    if not _allow_private() and _host_is_private(host):
+        raise ReachError(
+            BAD_INPUT,
+            f"refusing to read private or local address {host!r}; "
+            f"set {PRIVATE_URL_ENV}=1 to allow it",
+        )
+    return url
 
 _TITLE_RE = re.compile(r"<title[^>]*>(.*?)</title>", re.I | re.S)
 _DROP_RE = re.compile(r"<(script|style|noscript|svg|template)\b.*?</\1>", re.I | re.S)
@@ -95,6 +171,7 @@ def fetch(
     data: Optional[bytes] = None,
     method: Optional[str] = None,
 ) -> Response:
+    validate_url(url)
     request_headers = {
         "User-Agent": USER_AGENT,
         "Accept": accept,

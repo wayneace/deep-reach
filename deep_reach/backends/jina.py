@@ -19,6 +19,7 @@ from ..runtime.result import (
     ReachError,
     make_item,
 )
+from .http import validate_url
 
 BASE = "https://r.jina.ai"
 
@@ -55,9 +56,9 @@ class JinaReader:
 
 def _target_url(channel_name: str, target: str) -> str:
     if target.startswith(("http://", "https://")):
-        return target
+        return validate_url(target)
     if channel_name == "amazon":
-        return f"https://www.amazon.com/dp/{target}"
+        return validate_url(f"https://www.amazon.com/dp/{target}")
     raise ReachError(
         NEED_SETUP,
         f"{channel_name} reader fallback needs a full URL, got {target!r}",
