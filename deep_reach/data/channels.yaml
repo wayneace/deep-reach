@@ -1,0 +1,670 @@
+# Deep-Reach curated channel registry
+#
+# level:
+#   default      = 装好就能跑
+#   optional     = 需要登录或免费 key
+#   experimental = 可能不稳定
+#   planned      = 只在 roadmap 出现，不伪装成可用
+#
+# status: ready | needs_login | needs_key | experimental | planned
+# action.requires: none | login | key
+#
+# backend.tier (default p1); the registry always sorts p0 → p1 → p2:
+#   p0 = 原生免费接口：官方 API 免费层、公开 JSON、原生 CLI（可选 key/登录）
+#   p1 = OpenCLI 浏览器桥：复用已连接 Chrome 的登录态（可选登录）
+#   p2 = 第三方阅读/采集服务：Jina、Firecrawl、Bright Data（可选 key）
+#
+# backend.key overrides channel.key; use it when p0 and p2 need different keys.
+# Inside one tier the order below is preserved; across tiers it is enforced.
+
+version: 1
+
+channels:
+  # ── default ──────────────────────────────────────────────
+  bilibili:
+    level: default
+    status: ready
+    category: social
+    description: B站搜索、视频、字幕、评论
+    limits: 字幕需登录；公开搜索可能触发 -412，自动回退 OpenCLI；不保证完整评论树
+    not_supported: [完整评论树, 图片/视频理解]
+    next_action: 字幕需要登录；在浏览器登录 bilibili.com 后重试
+    key: null
+    requires_key: false
+    actions:
+      search:
+        description: 搜索视频
+        requires: none
+        params: [query, limit]
+        backends:
+          - {label: bilibili-public, tier: p0}
+          - {label: opencli-bilibili, site: bilibili, command: search, args: ["{query}"], limit: true}
+      read:
+        description: 读取视频信息
+        requires: none
+        params: [target]
+        backends:
+          - {label: bilibili-public, tier: p0}
+          - {label: opencli-bilibili, site: bilibili, command: video, args: ["{target}"]}
+      subtitle:
+        description: 读取视频字幕
+        requires: login
+        params: [target]
+        backends:
+          - {label: opencli-bilibili, site: bilibili, command: subtitle, args: ["{target}"]}
+      comments:
+        description: 读取视频评论
+        requires: none
+        params: [target, limit]
+        backends:
+          - {label: bilibili-public, tier: p0}
+          - {label: opencli-bilibili, site: bilibili, command: comments, args: ["{target}"], limit: true}
+
+  youtube:
+    level: default
+    status: ready
+    category: social
+    description: YouTube 搜索和视频信息
+    limits: 不保证完整评论树；字幕/评论受页面限制
+    not_supported: [完整评论树]
+    next_action: 可选申请 YouTube Data API key（P0）；没有 key 时自动走 OpenCLI（P1）
+    key: official.youtube.api_key
+    requires_key: false
+    actions:
+      search:
+        description: 搜索视频
+        requires: none
+        params: [query, limit]
+        backends:
+          - {label: youtube-api, tier: p0, requires_key: true}
+          - {label: opencli-youtube, site: youtube, command: search, args: ["{query}"], limit: true}
+      read:
+        description: 读取视频信息
+        requires: none
+        params: [target]
+        backends:
+          - {label: youtube-api, tier: p0, requires_key: true}
+          - {label: opencli-youtube, site: youtube, command: video, args: ["{target}"]}
+
+  weibo:
+    level: default
+    status: ready
+    category: social
+    description: 微博热搜和搜索
+    limits: search 需要登录；hot 不需要
+    not_supported: [完整评论树]
+    next_action: search 需要登录 weibo.com；hot 可直接用
+    key: null
+    requires_key: false
+    actions:
+      hot:
+        description: 微博热搜
+        requires: none
+        params: [limit]
+        backends:
+          - {label: opencli-weibo, site: weibo, command: hot, limit: true}
+      search:
+        description: 搜索微博
+        requires: login
+        params: [query, limit]
+        backends:
+          - {label: opencli-weibo, site: weibo, command: search, args: ["{query}"], limit: true}
+      read:
+        description: 读取单条微博
+        requires: none
+        params: [target]
+        backends:
+          - {label: opencli-weibo, site: weibo, command: post, args: ["{target}"]}
+      comments:
+        description: 读取微博评论
+        requires: none
+        params: [target, limit]
+        backends:
+          - {label: opencli-weibo, site: weibo, command: comments, args: ["{target}"], limit: true}
+
+  xueqiu:
+    level: default
+    status: ready
+    category: social
+    description: 雪球行情、热帖、热搜股、搜索
+    limits: hot/hot_stocks 需要 xueqiu.cookie（几小时过期）；行情优先腾讯公开接口
+    not_supported: [完整评论树, 历史 K 线]
+    next_action: 可选填 xueqiu.cookie 解锁雪球 API；否则 hot 自动走 OpenCLI
+    key: xueqiu.cookie
+    requires_key: false
+    actions:
+      quote:
+        description: 股票实时行情（A股/港股/美股）
+        requires: none
+        params: [target]
+        backends:
+          - {label: tencent-quote, tier: p0}
+          - {label: xueqiu-api, tier: p0}
+          - {label: opencli-xueqiu, site: xueqiu, command: stock, args: ["{target}"]}
+      hot:
+        description: 雪球热门动态
+        requires: login
+        params: [limit]
+        backends:
+          - {label: xueqiu-api, tier: p0}
+          - {label: opencli-xueqiu, site: xueqiu, command: hot, limit: true}
+      hot_stocks:
+        description: 雪球热搜股
+        requires: login
+        params: [limit]
+        backends:
+          - {label: xueqiu-api, tier: p0}
+      search:
+        description: 搜索股票
+        requires: none
+        params: [query, limit]
+        backends:
+          - {label: tencent-search, tier: p0}
+          - {label: xueqiu-api, tier: p0}
+          - {label: opencli-xueqiu, site: xueqiu, command: search, args: ["{query}"], limit: true}
+      comments:
+        description: 股票讨论
+        requires: none
+        params: [target, limit]
+        backends:
+          - {label: opencli-xueqiu, site: xueqiu, command: comments, args: ["{target}"], limit: true}
+
+  amazon:
+    level: default
+    status: ready
+    category: commerce
+    description: Amazon 搜索、商品、榜单、评论摘要
+    limits: 搜索页可能触发验证码；价格/库存以页面为准
+    not_supported: [历史价格曲线, 广告数据]
+    next_action: 使用 OpenCLI；遇到验证码时在浏览器手动完成
+    key: null
+    requires_key: false
+    actions:
+      search:
+        description: 搜索商品
+        requires: none
+        params: [query, limit]
+        backends:
+          - {label: opencli-amazon, site: amazon, command: search, args: ["{query}"], limit: true}
+      product:
+        description: 读取商品详情
+        requires: none
+        params: [target]
+        backends:
+          - {label: opencli-amazon, site: amazon, command: product, args: ["{target}"]}
+          - {label: jina, tier: p2, key: search.jina.api_key}
+      bestsellers:
+        description: Best Sellers 榜单
+        requires: none
+        params: [limit]
+        backends:
+          - {label: opencli-amazon, site: amazon, command: bestsellers, limit: true}
+      discussion:
+        description: 评论摘要和讨论
+        requires: none
+        params: [target, limit]
+        backends:
+          - {label: opencli-amazon, site: amazon, command: discussion, args: ["{target}"], limit: true}
+
+  web:
+    level: default
+    status: ready
+    category: web
+    description: 通用网页阅读
+    limits: 需要公开 URL；不能绕过登录墙
+    not_supported: [登录墙内容, 结构化字段]
+    next_action: 先直连公开页；需要 JS 时自动用 Jina；可选填 key 提升额度
+    key: search.jina.api_key
+    requires_key: false
+    actions:
+      read:
+        description: URL 转 Markdown
+        requires: none
+        params: [target]
+        backends:
+          - {label: http-read, tier: p0}
+          - {label: jina, tier: p2, key: search.jina.api_key}
+
+  github:
+    level: default
+    status: ready
+    category: dev
+    description: GitHub 仓库与 issue 检索
+    limits: 无 token 60 req/h（搜索 10 req/min）；有 token 5,000 req/h
+    not_supported: [代码内容搜索, 私有仓库, PR 评论树]
+    next_action: 可选填 official.github.token 提升额度
+    key: official.github.token
+    requires_key: false
+    actions:
+      search:
+        description: 搜索仓库
+        requires: none
+        params: [query, limit]
+        backends:
+          - {label: github-api, tier: p0}
+      read:
+        description: 读取仓库信息
+        requires: none
+        params: [target]
+        backends:
+          - {label: github-api, tier: p0}
+      issues:
+        description: 读取仓库 issue（不含 PR）
+        requires: none
+        params: [target, limit]
+        backends:
+          - {label: github-api, tier: p0}
+
+  v2ex:
+    level: default
+    status: ready
+    category: dev
+    description: V2EX 热帖、节点、帖子与回复
+    limits: 公开 API；无官方关键词搜索；热帖约 10 条；回复不分页
+    not_supported: [关键词搜索, 回复分页]
+    next_action: 公开 API 可直接用
+    key: null
+    requires_key: false
+    actions:
+      hot:
+        description: 热门主题
+        requires: none
+        params: [limit]
+        backends:
+          - {label: v2ex-public, tier: p0}
+      node:
+        description: 节点下的主题
+        requires: none
+        params: [target, limit]
+        backends:
+          - {label: v2ex-public, tier: p0}
+      read:
+        description: 读取主题
+        requires: none
+        params: [target]
+        backends:
+          - {label: v2ex-public, tier: p0}
+      comments:
+        description: 读取主题回复
+        requires: none
+        params: [target, limit]
+        backends:
+          - {label: v2ex-public, tier: p0}
+
+  # ── optional: login ─────────────────────────────────────
+  x:
+    level: optional
+    status: needs_login
+    category: social
+    description: X / Twitter 搜索和帖子
+    limits: 单帖可读不代表完整回复流
+    not_supported: [完整评论树]
+    next_action: 在 Deep-Reach 专用 Chrome profile 登录 x.com 后重试
+    key: null
+    requires_key: false
+    actions:
+      search:
+        description: 搜索推文
+        requires: login
+        params: [query, limit]
+        backends:
+          - {label: opencli-twitter, site: twitter, command: search, args: ["{query}"], limit: true}
+      read:
+        description: 读取推文串
+        requires: login
+        params: [target]
+        backends:
+          - {label: opencli-twitter, site: twitter, command: thread, args: ["{target}"], limit: true}
+
+  reddit:
+    level: optional
+    status: needs_login
+    category: social
+    description: Reddit 搜索和评论
+    limits: 不保证完整评论树
+    not_supported: [完整评论树]
+    next_action: 在 Deep-Reach 专用 Chrome profile 登录 reddit.com 后重试
+    key: null
+    requires_key: false
+    actions:
+      search:
+        description: 搜索帖子
+        requires: login
+        params: [query, limit]
+        backends:
+          - {label: opencli-reddit, site: reddit, command: search, args: ["{query}"], limit: true}
+      read:
+        description: 读取帖子和评论
+        requires: login
+        params: [target]
+        backends:
+          - {label: opencli-reddit, site: reddit, command: read, args: ["{target}"], limit: true}
+
+  xiaohongshu:
+    level: optional
+    status: needs_login
+    category: social
+    description: 小红书搜索、笔记、评论
+    limits: 不保证全部评论；不声称理解图片/视频
+    not_supported: [完整评论树, 图片/视频理解]
+    next_action: 在 Deep-Reach 专用 Chrome profile 登录 xiaohongshu.com 后重试
+    key: null
+    requires_key: false
+    actions:
+      search:
+        description: 搜索笔记
+        requires: login
+        params: [query, limit]
+        backends:
+          - {label: opencli-xiaohongshu, site: xiaohongshu, command: search, args: ["{query}"], limit: true}
+      read:
+        description: 读取笔记
+        requires: login
+        params: [target]
+        backends:
+          - {label: opencli-xiaohongshu, site: xiaohongshu, command: note, args: ["{target}"]}
+      comments:
+        description: 读取笔记评论
+        requires: login
+        params: [target, limit]
+        backends:
+          - {label: opencli-xiaohongshu, site: xiaohongshu, command: comments, args: ["{target}"], limit: true}
+
+  zhihu:
+    level: optional
+    status: needs_login
+    category: social
+    description: 知乎搜索和问题
+    limits: 不保证完整回答/评论
+    not_supported: [完整评论树]
+    next_action: 在 Deep-Reach 专用 Chrome profile 登录 zhihu.com 后重试
+    key: null
+    requires_key: false
+    actions:
+      search:
+        description: 搜索问题
+        requires: login
+        params: [query, limit]
+        backends:
+          - {label: opencli-zhihu, site: zhihu, command: search, args: ["{query}"], limit: true}
+      read:
+        description: 读取问题
+        requires: login
+        params: [target, limit]
+        backends:
+          - {label: opencli-zhihu, site: zhihu, command: question, args: ["{target}"], limit: true}
+
+  douyin:
+    level: optional
+    status: needs_login
+    category: social
+    description: 抖音搜索、用户视频、视频详情
+    limits: 搜索/视频可能需登录；不保证评论
+    not_supported: [完整评论树, 图片/视频理解]
+    next_action: 在 Deep-Reach 专用 Chrome profile 登录 douyin.com 后重试
+    key: null
+    requires_key: false
+    actions:
+      search:
+        description: 搜索视频
+        requires: login
+        params: [query, limit]
+        backends:
+          - {label: opencli-douyin, site: douyin, command: search, args: ["{query}"], limit: true}
+      videos:
+        description: 用户视频列表
+        requires: login
+        params: [target, limit]
+        backends:
+          - {label: opencli-douyin, site: douyin, command: user-videos, args: ["{target}"], limit: true}
+      detail:
+        description: 视频详情
+        requires: login
+        params: [target]
+        backends:
+          - {label: opencli-douyin, site: douyin, command: detail, args: ["{target}"]}
+
+  # ── experimental ────────────────────────────────────────
+  producthunt:
+    level: experimental
+    status: experimental
+    category: commerce
+    description: Product Hunt 新品
+    limits: 官方 API 需要 developer token；无 token 时 OpenCLI 只返回最新发布，不是投票榜
+    not_supported: [关键词搜索, 历史数据]
+    next_action: 可选填 official.producthunt.token 走官方 API；否则自动走 OpenCLI
+    key: official.producthunt.token
+    requires_key: false
+    actions:
+      hot:
+        description: 今日热门
+        requires: none
+        params: [limit]
+        backends:
+          - {label: producthunt-api, tier: p0, requires_key: true}
+          - {label: opencli-producthunt, site: producthunt, command: posts, limit: true}
+
+  kickstarter:
+    level: experimental
+    status: experimental
+    category: crowdfunding
+    description: Kickstarter 项目阅读
+    limits: 仅支持给定 URL 阅读；没有搜索 adapter
+    not_supported: [关键词搜索, 完整评论]
+    next_action: 传入完整项目 URL；搜索在 R5 接入
+    key: null
+    requires_key: false
+    actions:
+      read:
+        description: 读取项目页
+        requires: none
+        params: [target]
+        backends:
+          - {label: http-read, tier: p0}
+          - {label: jina, tier: p2, key: search.jina.api_key}
+
+  cnipa:
+    level: experimental
+    status: experimental
+    category: patent
+    description: 中国专利网页阅读
+    limits: 仅支持给定 URL 阅读；官方检索需登录+验证码
+    not_supported: [关键词搜索, 批量检索]
+    next_action: 传入完整检索/详情 URL；批量检索在 R5 评估
+    key: null
+    requires_key: false
+    actions:
+      read:
+        description: 读取专利页
+        requires: none
+        params: [target]
+        backends:
+          - {label: http-read, tier: p0}
+          - {label: jina, tier: p2, key: search.jina.api_key}
+
+  copyright:
+    level: experimental
+    status: experimental
+    category: patent
+    description: 美国版权记录阅读
+    limits: 仅支持给定 URL 阅读；无统一全球版权 API
+    not_supported: [全球版权检索, 批量]
+    next_action: 传入完整 URL；批量数据在 R5 评估
+    key: null
+    requires_key: false
+    actions:
+      read:
+        description: 读取版权记录页
+        requires: none
+        params: [target]
+        backends:
+          - {label: http-read, tier: p0}
+          - {label: jina, tier: p2, key: search.jina.api_key}
+
+  # ── optional: free key ──────────────────────────────────
+  ebay:
+    level: optional
+    status: needs_key
+    category: commerce
+    description: eBay 商品搜索与详情
+    limits: Browse API 免费 5,000 calls/day；需要 developer client_id + client_secret
+    not_supported: [历史成交价, 卖家后台数据]
+    next_action: 申请 eBay developer key，填 official.ebay.client_id / client_secret
+    key: official.ebay.client_id
+    requires_key: true
+    actions:
+      search:
+        description: 搜索商品
+        requires: key
+        params: [query, limit]
+        backends:
+          - {label: ebay-api, tier: p0, requires_key: true}
+      read:
+        description: 读取商品详情
+        requires: key
+        params: [target]
+        backends:
+          - {label: ebay-api, tier: p0, requires_key: true}
+
+  etsy:
+    level: optional
+    status: needs_key
+    category: commerce
+    description: Etsy 手作/细分类目搜索
+    limits: Open API v3 免费 10,000 calls/day；需要 app key
+    not_supported: [历史价格, 卖家后台数据]
+    next_action: 申请 Etsy app key，填 official.etsy.api_key
+    key: official.etsy.api_key
+    requires_key: true
+    actions:
+      search:
+        description: 搜索在售商品
+        requires: key
+        params: [query, limit]
+        backends:
+          - {label: etsy-api, tier: p0, requires_key: true}
+      read:
+        description: 读取商品详情
+        requires: key
+        params: [target]
+        backends:
+          - {label: etsy-api, tier: p0, requires_key: true}
+
+  uspto:
+    level: optional
+    status: needs_key
+    category: patent
+    description: USPTO 专利申请与授权检索
+    limits: ODP 免费；需要 USPTO API key；支持 AND/OR/NOT、通配符、短语
+    not_supported: [全文权利要求, 商标状态]
+    next_action: 在 account.uspto.gov/api-manager 申请 key，填 official.uspto.odp_api_key
+    key: official.uspto.odp_api_key
+    requires_key: true
+    actions:
+      search:
+        description: 搜索专利申请/授权
+        requires: key
+        params: [query, limit]
+        backends:
+          - {label: uspto-odp, tier: p0, requires_key: true}
+      read:
+        description: 按申请号/专利号读取
+        requires: key
+        params: [target]
+        backends:
+          - {label: uspto-odp, tier: p0, requires_key: true}
+
+  epo:
+    level: optional
+    status: needs_key
+    category: patent
+    description: EPO OPS 全球专利检索（US/CN/JP/EP）
+    limits: 免费 4GB/周；需要 OPS consumer key/secret
+    not_supported: [全文批量下载, 法律状态深度]
+    next_action: 注册 EPO OPS，填 official.epo.consumer_key / consumer_secret
+    key: official.epo.consumer_key
+    requires_key: true
+    actions:
+      search:
+        description: 全球专利检索
+        requires: key
+        params: [query, limit]
+        backends:
+          - {label: epo-ops, tier: p0, requires_key: true}
+      read:
+        description: 按公开号读取
+        requires: key
+        params: [target]
+        backends:
+          - {label: epo-ops, tier: p0, requires_key: true}
+
+  # ── planned: roadmap only ───────────────────────────────
+  kipris:
+    level: planned
+    status: planned
+    category: patent
+    description: KIPRIS Plus
+    next_action: Phase R5
+    key: official.kipris.api_key
+    requires_key: true
+    actions: {}
+
+  euipo:
+    level: planned
+    status: planned
+    category: patent
+    description: EUIPO
+    next_action: Phase R5
+    key: official.euipo.client_id
+    requires_key: true
+    actions: {}
+
+  hackernews:
+    level: planned
+    status: planned
+    category: social
+    description: Hacker News Algolia
+    next_action: Phase R5
+    key: null
+    requires_key: false
+    actions: {}
+
+  tieba:
+    level: planned
+    status: planned
+    category: social
+    description: 贴吧
+    next_action: Phase R5
+    key: null
+    requires_key: false
+    actions: {}
+
+  hupu:
+    level: planned
+    status: planned
+    category: social
+    description: 虎扑
+    next_action: Phase R5
+    key: null
+    requires_key: false
+    actions: {}
+
+  1688:
+    level: planned
+    status: planned
+    category: commerce
+    description: 1688 采购
+    next_action: Phase R5（已有 1688 CLI）
+    key: null
+    requires_key: false
+    actions: {}
+
+  sellersprite:
+    level: planned
+    status: planned
+    category: commerce
+    description: SellerSprite 关键词/市场
+    next_action: Phase R5（网页会员）
+    key: null
+    requires_key: false
+    actions: {}

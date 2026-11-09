@@ -1,0 +1,8 @@
+include LICENSE
+include NOTICE
+include README.md
+include CHANGELOG.md
+include config/keys.example.yaml
+recursive-include skill *.md
+recursive-include tests *.py
+recursive-include scripts *.py

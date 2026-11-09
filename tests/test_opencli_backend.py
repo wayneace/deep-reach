@@ -1,0 +1,100 @@
+import unittest
+from types import SimpleNamespace
+
+from deep_reach.backends.opencli import (
+    OpenCLIClient,
+    register_opencli_backends,
+)
+from deep_reach.channels.base import Action, BackendSpec, Channel, Param
+from deep_reach.runtime.dispatch import BACKENDS, run_action
+from deep_reach.runtime.keys import Keys
+from deep_reach.runtime.result import WRITE_BLOCKED, ReachError
+
+
+class FakeClient(OpenCLIClient):
+    def __init__(self):
+        super().__init__(bin_path="fake-opencli")
+
+    def _run(self, argv, timeout):
+        if argv[0] == "list":
+            return SimpleNamespace(
+                stdout=(
+                    '{"ok":true,"data":{"commands":['
+                    '{"command":"twitter search","access":"read"},'
+                    '{"command":"twitter post","access":"write"}'
+                    "]}}"
+                ),
+                stderr="",
+                returncode=0,
+            )
+        if argv[0] == "twitter" and argv[1] == "search":
+            return SimpleNamespace(
+                stdout=(
+                    '{"ok":true,"data":['
+                    '{"title":"hit","url":"https://x.com/1","text":"hello"}'
+                    "]}"
+                ),
+                stderr="",
+                returncode=0,
+            )
+        return SimpleNamespace(
+            stdout='{"ok":false,"error":{"code":"NOT_FOUND","message":"missing"}}',
+            stderr="",
+            returncode=1,
+        )
+
+
+class OpenCLIBackendTest(unittest.TestCase):
+    def tearDown(self):
+        BACKENDS.clear()
+
+    def test_read_command_allowed(self):
+        client = FakeClient()
+        self.assertTrue(client.is_read("twitter", "search"))
+
+    def test_write_command_blocked(self):
+        client = FakeClient()
+        self.assertFalse(client.is_read("twitter", "post"))
+        with self.assertRaises(ReachError) as ctx:
+            client.run("twitter", "post", [], timeout=5)
+        self.assertEqual(ctx.exception.code, WRITE_BLOCKED)
+
+    def test_handler_normalizes_items(self):
+        client = FakeClient()
+        register_opencli_backends(client, labels=("opencli-twitter",))
+        channel = Channel(
+            name="x",
+            category="social",
+            actions=(
+                Action(
+                    name="search",
+                    params=(Param("query"), Param("limit", required=False, type=int, default=20)),
+                    backends=(
+                        BackendSpec(
+                            label="opencli-twitter",
+                            method="search",
+                            options={
+                                "site": "twitter",
+                                "command": "search",
+                                "args": ["{query}"],
+                                "limit": True,
+                            },
+                        ),
+                    ),
+                ),
+            ),
+        )
+        env = run_action(
+            channel,
+            "search",
+            {"query": "ai", "limit": 5},
+            keys=Keys({}),
+        )
+        self.assertTrue(env["ok"])
+        self.assertEqual(env["backend"], "opencli-twitter")
+        self.assertEqual(env["items"][0]["title"], "hit")
+        self.assertEqual(env["items"][0]["source"], "x")
+
+
+if __name__ == "__main__":
+    unittest.main()

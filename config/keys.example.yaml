@@ -1,0 +1,69 @@
+# Deep-Reach keys
+# 所有 key 都是可选的。缺失时对应后端自动降级/禁用，系统继续运行。
+# P0 原生免费接口 → P1 OpenCLI → P2 第三方采集；key 只影响自己那一层的后端。
+# 复制到 ~/.deep-reach/keys.yaml 后填写。
+# 不要把填写后的文件提交到 git。
+
+version: 1
+
+official:
+  youtube:
+    api_key: ""          # 缺失 → 官方 API 禁用，走 opencli-youtube
+                         # 有 key → 10,000 units/天；search 100 units，read 1 unit
+
+  github:
+    token: ""            # P0 已使用；缺失 → 60 req/h；有 token → 5,000 req/h
+
+  v2ex:
+    token: ""            # v1 公开 API 不需要；预留给 v2
+
+  ebay:
+    client_id: ""        # 缺失 → Browse API 禁用（eBay 暂无 fallback）
+    client_secret: ""    # 与 client_id 同时需要
+    marketplace: "EBAY_US"  # 可选：EBAY_US / EBAY_GB / EBAY_DE
+    refresh_token: ""    # 预留；Browse 公开搜索用 client credentials
+
+  etsy:
+    api_key: ""          # 缺失 → 官方 API 禁用（Etsy 暂无 fallback）
+
+  producthunt:
+    token: ""            # 缺失 → 官方 API 禁用，走 opencli posts（最新发布）
+
+  uspto:
+    odp_api_key: ""      # 缺失 → ODP 禁用；在 account.uspto.gov/api-manager 申请
+    tsdr_api_key: ""     # 预留；商标状态 TSDR 未接
+
+  epo:
+    consumer_key: ""     # 缺失 → OPS 禁用；免费 4GB/周
+    consumer_secret: ""  # 与 consumer_key 同时需要
+
+  kipris:
+    api_key: ""          # 缺失 → 禁用，走 Google Patents/网页
+
+  euipo:
+    client_id: ""
+    client_secret: ""    # 缺失 → 禁用，走网页
+
+xueqiu:
+  cookie: ""             # 可选；从已登录 xueqiu.com 浏览器复制 Cookie，通常几小时过期
+                         # 缺失 → hot/hot_stocks 走 OpenCLI；quote/search 优先腾讯公开接口
+
+search:
+  exa:
+    api_key: ""          # 缺失 → 禁用
+  tavily:
+    api_key: ""          # 缺失 → 禁用
+  firecrawl:
+    api_key: ""          # 缺失 → 禁用
+  brightdata:
+    api_token: ""        # 缺失 → 禁用
+  brave:
+    api_key: ""          # 缺失 → 禁用
+  jina:
+    api_key: ""          # 缺失 → 20 RPM/IP；有 key → 500 RPM
+
+browser:
+  # auto = 自动读取 OpenCLI doctor 里已连接的 Chrome contextId。
+  # 也可以填 doctor 输出的 contextId；不要填任意名字，否则会连到不存在的 profile。
+  opencli_profile: "auto"
+  # B站 / 雪球的登录态由 OpenCLI 专用 profile 管理，不要写在这里。

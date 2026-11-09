@@ -1,0 +1,11 @@
+Deep-Reach
+==========
+
+This project references the architecture and naming conventions of Agent-Reach
+(https://github.com/Panniantong/Agent-Reach), which is licensed under MIT.
+
+OpenCLI (https://github.com/jackwener/opencli) is used as an external browser
+engine and is licensed under Apache-2.0.
+
+No Agent-Reach source code is vendored by default. If code is copied later,
+keep the original MIT notice in this file and in the copied files.
