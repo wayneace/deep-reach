@@ -9,6 +9,7 @@ from ..backends.opencli import RECOMMENDED_VERSION, OpenCLIClient, version_statu
 from ..channels.base import TIERS
 from ..channels.registry import Registry
 from . import health, quota
+from .browser_config import normalize_opencli_profile
 from .availability import (
     OPENCLI_INSTALL_COMMAND,
     action_risk,
@@ -36,7 +37,9 @@ def build_doctor_report(
     keys: Keys,
     client: Optional[OpenCLIClient] = None,
 ) -> dict:
-    client = client or OpenCLIClient(profile=keys.get("browser.opencli_profile") or "auto")
+    client = client or OpenCLIClient(
+        profile=normalize_opencli_profile(keys.get("browser.opencli_profile"))
+    )
     try:
         installed = client.version()
         opencli_version = version_status(installed)

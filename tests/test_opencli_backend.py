@@ -1,3 +1,4 @@
+import json
 import os
 import signal
 import unittest
@@ -19,7 +20,7 @@ class FakeClient(OpenCLIClient):
     def __init__(self):
         super().__init__(bin_path="fake-opencli")
 
-    def _run(self, argv, timeout):
+    def _run(self, argv, timeout, with_profile=True):
         if argv[0] == "list":
             return SimpleNamespace(
                 stdout=(
@@ -156,6 +157,47 @@ class OpenCLIBackendTest(unittest.TestCase):
             client.version()
         self.assertEqual(ctx.exception.code, NEED_SETUP)
         self.assertIn("npm install -g @jackwener/opencli", ctx.exception.message)
+
+    def test_no_profile_is_need_setup(self):
+        client = OpenCLIClient(bin_path="fake-opencli", profile="")
+        with self.assertRaises(ReachError) as ctx:
+            client._run(["bilibili", "search", "x"], timeout=5)
+        self.assertEqual(ctx.exception.code, NEED_SETUP)
+        self.assertIn("dedicated", ctx.exception.message.lower())
+
+    def test_auto_is_treated_as_unconfigured(self):
+        client = OpenCLIClient(bin_path="fake-opencli", profile="auto")
+        self.assertEqual(client.profile, "")
+
+    def test_legacy_env_does_not_set_profile(self):
+        with mock.patch.dict(os.environ, {"DEEP_REACH_OPENCLI_PROFILE": "ctx-1234"}):
+            client = OpenCLIClient(bin_path="fake-opencli")
+        self.assertEqual(client.profile, "")
+
+    def test_profile_status_reports_selected_context(self):
+        client = OpenCLIClient(bin_path="fake-opencli", profile="ctx-1234")
+        payload = {
+            "ok": True,
+            "data": {
+                "extensionConnected": True,
+                "profiles": [
+                    {"contextId": "main-999", "extensionVersion": "1.0"},
+                    {"contextId": "ctx-1234", "extensionVersion": "2.0"},
+                ],
+            },
+        }
+        with mock.patch.object(
+            client,
+            "_run",
+            return_value=SimpleNamespace(
+                stdout=json.dumps(payload), stderr="", returncode=0
+            ),
+        ):
+            status = client.profile_status()
+        self.assertTrue(status["configured"])
+        self.assertTrue(status["connected"])
+        self.assertEqual(status["context_id"], "ctx-1234")
+        self.assertEqual(status["profile_ids"], ["main-999", "ctx-1234"])
 
     def test_version_status_outdated_gives_npm_upgrade(self):
         status = version_status("2.0.1")

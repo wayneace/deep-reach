@@ -16,6 +16,7 @@ from typing import Optional
 
 from ..channels.base import BackendSpec, Channel
 from ..runtime.availability import OPENCLI_INSTALL_COMMAND, OPENCLI_PACKAGE
+from ..runtime.browser_config import normalize_opencli_profile
 from ..runtime.child_env import child_env
 from ..runtime.dispatch import BACKENDS
 from ..runtime.result import (
@@ -94,41 +95,12 @@ class OpenCLIClient:
             or shutil.which("opencli")
             or "opencli"
         )
-        self.profile = (
-            profile
-            or os.environ.get("DEEP_REACH_OPENCLI_PROFILE")
-            or "auto"
-        )
+        self.profile = normalize_opencli_profile(profile)
         self.window = window
-        self._profile_resolved: Optional[str] = None
         self._read_cache: dict[str, set[str]] = {}
 
-    def _detect_profile(self) -> Optional[str]:
-        """Use the contextId of the Chrome profile the extension is connected to."""
-        try:
-            result = self._run(["doctor"], timeout=15, with_profile=False)
-        except ReachError:
-            return None
-        text = (result.stdout or "").strip()
-        if not text:
-            return None
-        try:
-            payload = parse_envelope(text)
-        except ReachError:
-            return None
-        profiles = payload.get("data", {}).get("profiles", [])
-        if isinstance(profiles, list) and profiles:
-            return str(profiles[0].get("contextId") or "") or None
-        return None
-
     def _effective_profile(self) -> str:
-        if self._profile_resolved is not None:
-            return self._profile_resolved
-        if self.profile and self.profile != "auto":
-            self._profile_resolved = str(self.profile)
-        else:
-            self._profile_resolved = self._detect_profile() or ""
-        return self._profile_resolved
+        return self.profile
 
     @staticmethod
     def _kill_tree(proc: "subprocess.Popen[str]") -> None:
@@ -150,13 +122,19 @@ class OpenCLIClient:
                 pass
 
     def _run(self, argv: list[str], timeout: float, with_profile: bool = True):
+        if with_profile and not self.profile:
+            raise ReachError(
+                NEED_SETUP,
+                "OpenCLI requires a dedicated browser profile",
+                hint=(
+                    "Run `deep-reach profile launch`, install the OpenCLI "
+                    "extension in that window, then `deep-reach profile set "
+                    "<contextId>`."
+                ),
+            )
         env = child_env()
         if with_profile:
-            profile = self._effective_profile()
-            if profile:
-                env["OPENCLI_PROFILE"] = profile
-            else:
-                env.pop("OPENCLI_PROFILE", None)
+            env["OPENCLI_PROFILE"] = self.profile
         else:
             env.pop("OPENCLI_PROFILE", None)
         env["OPENCLI_WINDOW"] = self.window
@@ -207,30 +185,73 @@ class OpenCLIClient:
         text = (result.stdout or result.stderr).strip()
         return text or "unknown"
 
+    def _status_error(self, message: str) -> dict:
+        return {
+            "setting": self.profile,
+            "configured": bool(self.profile),
+            "connected": False,
+            "context_id": self.profile or None,
+            "profile_ids": [],
+            "profiles": [],
+            "window": self.window,
+            "error": message,
+        }
+
     def profile_status(self) -> dict:
-        """Return the connected Chrome profiles without forcing a profile."""
+        """Return connected profiles and whether the configured one is usable."""
         try:
             result = self._run(["doctor"], timeout=10, with_profile=False)
         except ReachError as exc:
-            return {"connected": False, "error": exc.message}
+            return self._status_error(exc.message)
         text = (result.stdout or "").strip()
         if not text:
-            return {"connected": False, "error": "opencli doctor returned nothing"}
+            return self._status_error("opencli doctor returned nothing")
         try:
             payload = parse_envelope(text)
         except ReachError as exc:
-            return {"connected": False, "error": exc.message}
+            return self._status_error(exc.message)
         data = payload.get("data", {}) if isinstance(payload, dict) else {}
         profiles = data.get("profiles", []) if isinstance(data, dict) else []
+        if not isinstance(profiles, list):
+            profiles = []
+        profile_ids = [
+            str(profile.get("contextId"))
+            for profile in profiles
+            if isinstance(profile, dict) and profile.get("contextId")
+        ]
+        selected = next(
+            (
+                profile
+                for profile in profiles
+                if isinstance(profile, dict)
+                and str(profile.get("contextId")) == self.profile
+            ),
+            None,
+        )
+        configured = bool(self.profile)
+        connected = bool(configured and selected is not None)
+        error = ""
+        if not configured:
+            error = "no dedicated profile configured"
+        elif not connected:
+            error = f"configured profile {self.profile} is not connected"
         return {
-            "connected": bool(data.get("extensionConnected")),
+            "setting": self.profile,
+            "configured": configured,
+            "connected": connected,
+            "context_id": self.profile or None,
+            "profile_ids": profile_ids,
+            "profiles": profiles,
             "daemon": bool(data.get("daemonRunning")),
             "cli_version": data.get("cliVersion"),
-            "extension_version": data.get("extensionVersion"),
+            "extension_version": (
+                (selected or {}).get("extensionVersion")
+                or data.get("extensionVersion")
+            ),
             "extension_outdated": bool(data.get("extensionOutdated")),
             "latest_extension_version": data.get("latestExtensionVersion"),
-            "context_id": profiles[0].get("contextId") if profiles else None,
-            "profiles": profiles,
+            "window": self.window,
+            "error": error,
         }
 
     def read_commands(self, site: str) -> set[str]:

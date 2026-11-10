@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest import mock
 
 from deep_reach.runtime.profile import set_context
+from deep_reach.runtime.result import ReachError
 
 
 class ProfileTest(unittest.TestCase):
@@ -45,6 +46,18 @@ class ProfileTest(unittest.TestCase):
             os.environ["DEEP_REACH_KEYS_FILE"] = str(path)
             set_context("ctx-123")
             self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+
+    def test_set_context_rejects_auto(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            os.environ["DEEP_REACH_KEYS_FILE"] = str(Path(tmp) / "keys.yaml")
+            with self.assertRaises(ReachError):
+                set_context("auto")
+
+    def test_set_context_rejects_whitespace(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            os.environ["DEEP_REACH_KEYS_FILE"] = str(Path(tmp) / "keys.yaml")
+            with self.assertRaises(ReachError):
+                set_context("ctx 123")
 
     def test_set_context_survives_chmod_failure(self):
         if os.name == "nt":

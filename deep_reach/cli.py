@@ -51,6 +51,7 @@ from .runtime.availability import (
     detect_environment,
     next_action_for,
 )
+from .runtime.browser_config import normalize_opencli_profile
 from .runtime.child_env import child_env
 from .runtime.dispatch import run_action
 from .runtime.doctor import build_doctor_report, format_doctor_text
@@ -84,7 +85,7 @@ def _as_bool(value, default: bool = True) -> bool:
 
 
 def _register_backends(keys: Keys) -> None:
-    profile = keys.get("browser.opencli_profile") or "auto"
+    profile = normalize_opencli_profile(keys.get("browser.opencli_profile"))
     register_opencli_backends(OpenCLIClient(profile=profile))
     register_jina_backend(keys)
     register_tavily_backends(keys)

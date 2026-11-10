@@ -16,15 +16,18 @@ from pathlib import Path
 from typing import Optional
 
 from ..backends.opencli import OpenCLIClient
+from .browser_config import normalize_opencli_profile
 from .child_env import child_env
 from .keys import Keys, default_keys_path
+from .result import BAD_INPUT, ReachError
 
 
 def status(keys: Optional[Keys] = None, client: Optional[OpenCLIClient] = None) -> dict:
     keys = keys or Keys.load()
-    client = client or OpenCLIClient(profile=keys.get("browser.opencli_profile") or "auto")
+    setting = normalize_opencli_profile(keys.get("browser.opencli_profile"))
+    client = client or OpenCLIClient(profile=setting)
     return {
-        "setting": keys.get("browser.opencli_profile") or "auto",
+        "setting": setting,
         "opencli": client.profile_status(),
         "dedicated_dir": str(profile_dir()),
     }
@@ -42,6 +45,13 @@ def _secure_path(path: Path) -> None:
 
 
 def set_context(context_id: str) -> Path:
+    normalized = normalize_opencli_profile(context_id)
+    if not normalized:
+        raise ReachError(
+            BAD_INPUT,
+            "contextId must be 4-64 letters, digits, underscores, or hyphens",
+        )
+    context_id = normalized
     path = default_keys_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists():
