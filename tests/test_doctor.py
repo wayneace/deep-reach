@@ -48,6 +48,20 @@ class MissingClient(FakeClient):
         raise ReachError(NEED_SETUP, "opencli is not installed")
 
 
+class MissingConfiguredClient(MissingClient):
+    def profile_status(self):
+        return {
+            "setting": "ctx-1234",
+            "configured": True,
+            "connected": False,
+            "context_id": "ctx-1234",
+            "profile_ids": [],
+            "profiles": [],
+            "window": "background",
+            "error": "opencli is not installed",
+        }
+
+
 class DoctorTest(unittest.TestCase):
     def setUp(self):
         patcher = mock.patch(
@@ -191,6 +205,22 @@ class DoctorEnvironmentTest(unittest.TestCase):
         self.assertTrue(report["opencli"]["missing"])
         rows = {row["name"]: row for row in report["channels"]}
         self.assertIn("npm install -g @jackwener/opencli", rows["weibo"]["next_action"])
+
+    def test_configured_profile_without_binary_keeps_install_hint(self):
+        keys = Keys({"browser": {"opencli_profile": "ctx-1234"}})
+        with mock.patch(
+            "deep_reach.runtime.availability._opencli_installed",
+            return_value=False,
+        ), mock.patch(
+            "deep_reach.runtime.availability.shutil.which", return_value=None
+        ):
+            report = build_doctor_report(
+                load_registry(), keys, client=MissingConfiguredClient()
+            )
+        rows = {row["name"]: row for row in report["channels"]}
+        self.assertTrue(report["opencli"]["missing"])
+        self.assertIn("npm install -g @jackwener/opencli", rows["weibo"]["next_action"])
+        self.assertIn("not installed", format_doctor_text(report))
 
     def test_disconnected_browser_points_to_extension_not_reinstall(self):
         with mock.patch(

@@ -1,3 +1,4 @@
+import json
 import unittest
 
 from deep_reach.runtime.result import (
@@ -28,6 +29,14 @@ class RedactionTest(unittest.TestCase):
         secret = 'a"b\\c\nd'
         register_secret(secret)
         self.assertNotIn("a\\\"b", dump({"value": secret}))
+
+    def test_json_escaped_secret_in_upstream_body_is_redacted(self):
+        secret = 'a"b\\c\nd'
+        register_secret(secret)
+        body = json.dumps({"error": f"invalid key {secret}"})
+        error = ReachError(UPSTREAM_BROKEN, f"HTTP 401: {body}")
+        self.assertNotIn(secret, error.message)
+        self.assertNotIn(json.dumps(secret)[1:-1], error.message)
 
     def test_sanitize_url_redacts_credential_query_params(self):
         url = "https://example.test/x?key=abc123&ok=1&access_token=tok"

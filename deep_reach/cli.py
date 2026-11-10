@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import os
 import shutil
+import stat
 import subprocess
 import sys
 from pathlib import Path
@@ -507,6 +508,23 @@ def cmd_setup(args: argparse.Namespace) -> int:
         print(f"CONFIG_ERROR: {exc.message}", file=sys.stderr)
         return 2
     checks.append(("keys", str(keys.path), "ok" if keys.path and keys.path.exists() else "missing (optional)"))
+    keys_mode = "n/a"
+    keys_secure = True
+    if keys.path and keys.path.exists() and os.name != "nt":
+        try:
+            raw_mode = stat.S_IMODE(keys.path.stat().st_mode)
+            keys_mode = f"{raw_mode:03o}"
+            keys_secure = not (raw_mode & 0o077)
+        except OSError:
+            keys_mode = "unknown"
+            keys_secure = False
+    checks.append(
+        (
+            "keys mode",
+            keys_mode,
+            "ok" if keys_secure else "warning",
+        )
+    )
     template = template_path()
     checks.append(("template", str(template), "ok" if template.is_file() else "missing"))
 

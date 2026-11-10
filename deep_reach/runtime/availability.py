@@ -92,7 +92,6 @@ def environment_from_profile(keys: Keys, profile: dict) -> Environment:
     configured = bool(profile.get("configured"))
     installed = bool(
         connected
-        or configured
         or profile.get("daemon")
         or profile.get("cli_version")
         or _opencli_installed()

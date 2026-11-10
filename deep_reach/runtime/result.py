@@ -11,6 +11,7 @@ upstream output.
 from __future__ import annotations
 
 import datetime as _dt
+import html
 import json
 import re
 import urllib.parse
@@ -55,7 +56,15 @@ def register_secret(value: object) -> None:
     text = str(value).strip()
     if len(text) < 6 or text.lower() in PLACEHOLDER_VALUES:
         return
-    _SECRET_VALUES.add(text)
+    variants = {
+        text,
+        json.dumps(text)[1:-1],
+        json.dumps(text, ensure_ascii=False)[1:-1],
+        urllib.parse.quote(text, safe=""),
+        urllib.parse.quote_plus(text),
+        html.escape(text, quote=True),
+    }
+    _SECRET_VALUES.update(item for item in variants if len(item) >= 6)
 
 
 def clear_secrets() -> None:
@@ -228,7 +237,7 @@ class ReachError(Exception):
 
 
 def _clean(text: object) -> str:
-    return redact_text(str(text).strip()[:_MAX_MESSAGE_CHARS])
+    return redact_text(str(text).strip())[:_MAX_MESSAGE_CHARS]
 
 
 def now_iso() -> str:

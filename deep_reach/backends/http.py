@@ -189,6 +189,12 @@ class ValidatedRedirectHandler(urllib.request.HTTPRedirectHandler):
     """Validate redirects and strip credentials when the origin changes."""
 
     def redirect_request(self, req, fp, code, msg, headers, newurl):
+        try:
+            urllib.parse.urlsplit(newurl).port
+        except ValueError:
+            raise ReachError(
+                BAD_INPUT, f"invalid redirect URL: {sanitize_url(newurl)}"
+            ) from None
         validate_url(newurl)
         request = super().redirect_request(req, fp, code, msg, headers, newurl)
         if request is None:

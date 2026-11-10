@@ -1,6 +1,7 @@
 import argparse
 import io
 import json
+import os
 import tempfile
 import unittest
 from contextlib import redirect_stdout
@@ -143,6 +144,37 @@ class SetupTextTest(unittest.TestCase):
         self.assertIn(
             f"Keys: optional — copy {template_path()} to {key_path}.", output
         )
+
+    def test_setup_reports_insecure_keys_mode(self):
+        if os.name == "nt":
+            self.skipTest("POSIX permissions only")
+        with tempfile.TemporaryDirectory() as tmp:
+            key_path = Path(tmp) / "keys.yaml"
+            key_path.write_text("version: 1\n", encoding="utf-8")
+            os.chmod(key_path, 0o644)
+            with mock.patch(
+                "deep_reach.cli.shutil.which", return_value=None
+            ), mock.patch(
+                "deep_reach.cli._load_keys",
+                return_value=Keys({}, path=key_path),
+            ), mock.patch(
+                "deep_reach.cli.profile_status",
+                return_value={
+                    "opencli": {
+                        "connected": False,
+                        "configured": False,
+                        "context_id": None,
+                    }
+                },
+            ), mock.patch.dict("os.environ", {"DEEP_REACH_OPENCLI_BIN": ""}):
+                buffer = io.StringIO()
+                with redirect_stdout(buffer):
+                    code = cmd_setup(argparse.Namespace())
+        output = buffer.getvalue()
+        self.assertEqual(code, 0)
+        self.assertIn("keys mode", output)
+        self.assertIn("644", output)
+        self.assertIn("warning", output)
 
     def test_setup_points_to_keys_file_when_browser_connected(self):
         with tempfile.TemporaryDirectory() as tmp:

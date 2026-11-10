@@ -49,6 +49,18 @@ OPTIONAL_CASES = [
 ]
 
 
+def _opencli_only(channel, action: str) -> bool:
+    action_obj = channel.action(action) if hasattr(channel, "action") else None
+    return bool(
+        action_obj
+        and action_obj.backends
+        and all(
+            backend.label.startswith("opencli-")
+            for backend in action_obj.backends
+        )
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--include-optional", action="store_true")
@@ -80,6 +92,12 @@ def main() -> int:
         if channel is None:
             print(f"{channel_name}/{action}: MISSING CHANNEL")
             failures += 1
+            continue
+        if not profile and _opencli_only(channel, action):
+            print(
+                f"{channel_name}/{action}: SKIP "
+                "(no dedicated OpenCLI profile)"
+            )
             continue
         env = run_action(channel, action, params, keys=keys, timeout=60)
         code = env["error"]["code"] if env["error"] else "-"
