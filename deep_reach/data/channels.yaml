@@ -49,9 +49,10 @@ channels:
       subtitle:
         description: 读取视频字幕
         requires: login
+        ui_fallback: true
+        risk: high
         params: [target]
-        backends:
-          - {label: opencli-bilibili, site: bilibili, command: subtitle, args: ["{target}"]}
+        backends: []
       comments:
         description: 读取视频评论
         requires: none
@@ -106,9 +107,10 @@ channels:
       search:
         description: 搜索微博
         requires: login
+        ui_fallback: true
+        risk: high
         params: [query, limit]
-        backends:
-          - {label: opencli-weibo, site: weibo, command: search, args: ["{query}"], limit: true}
+        backends: []
       read:
         description: 读取单条微博
         requires: none
@@ -144,16 +146,19 @@ channels:
       hot:
         description: 雪球热门动态
         requires: login
+        ui_fallback: true
+        risk: high
         params: [limit]
         backends:
-          - {label: xueqiu-api, tier: p0, requires_key: true}
-          - {label: opencli-xueqiu, site: xueqiu, command: hot, limit: true}
+          - {label: xueqiu-api, tier: p0, requires_key: true, supports_login: true}
       hot_stocks:
         description: 雪球热搜股
         requires: login
+        ui_fallback: true
+        risk: high
         params: [limit]
         backends:
-          - {label: xueqiu-api, tier: p0, requires_key: true}
+          - {label: xueqiu-api, tier: p0, requires_key: true, supports_login: true}
       search:
         description: 搜索股票
         requires: none
@@ -192,7 +197,7 @@ channels:
         params: [target]
         backends:
           - {label: opencli-amazon, site: amazon, command: product, args: ["{target}"]}
-          - {label: jina, tier: p2, key: search.jina.api_key}
+          - {label: jina, tier: p1, key: search.jina.api_key}
           - {label: firecrawl-scrape, tier: p2, requires_key: true, key: search.firecrawl.api_key}
           - {label: tavily-extract, tier: p2, requires_key: true, key: search.tavily.api_key}
           - {label: brightdata-unlocker, tier: p2, requires_key: true, keys: [search.brightdata.api_token, search.brightdata.unlocker_zone]}
@@ -234,8 +239,8 @@ channels:
         requires: none
         params: [target]
         backends:
-          - {label: http-read, tier: p0}
-          - {label: jina, tier: p2, key: search.jina.api_key}
+          - {label: http-read, tier: p1}
+          - {label: jina, tier: p1, key: search.jina.api_key}
           - {label: firecrawl-scrape, tier: p2, requires_key: true, key: search.firecrawl.api_key}
           - {label: tavily-extract, tier: p2, requires_key: true, key: search.tavily.api_key}
           - {label: brightdata-unlocker, tier: p2, requires_key: true, keys: [search.brightdata.api_token, search.brightdata.unlocker_zone]}
@@ -321,15 +326,17 @@ channels:
       search:
         description: 搜索推文
         requires: login
+        ui_fallback: true
+        risk: high
         params: [query, limit]
-        backends:
-          - {label: opencli-twitter, site: twitter, command: search, args: ["{query}"], limit: true}
+        backends: []
       read:
         description: 读取推文串
         requires: login
+        ui_fallback: true
+        risk: high
         params: [target]
-        backends:
-          - {label: opencli-twitter, site: twitter, command: thread, args: ["{target}"], limit: true}
+        backends: []
 
   reddit:
     level: optional
@@ -345,15 +352,17 @@ channels:
       search:
         description: 搜索帖子
         requires: login
+        ui_fallback: true
+        risk: high
         params: [query, limit]
-        backends:
-          - {label: opencli-reddit, site: reddit, command: search, args: ["{query}"], limit: true}
+        backends: []
       read:
         description: 读取帖子和评论
         requires: login
+        ui_fallback: true
+        risk: high
         params: [target]
-        backends:
-          - {label: opencli-reddit, site: reddit, command: read, args: ["{target}"], limit: true}
+        backends: []
 
   xiaohongshu:
     level: optional
@@ -369,21 +378,24 @@ channels:
       search:
         description: 搜索笔记
         requires: login
+        ui_fallback: true
+        risk: high
         params: [query, limit]
-        backends:
-          - {label: opencli-xiaohongshu, site: xiaohongshu, command: search, args: ["{query}"], limit: true}
+        backends: []
       read:
         description: 读取笔记
         requires: login
+        ui_fallback: true
+        risk: high
         params: [target]
-        backends:
-          - {label: opencli-xiaohongshu, site: xiaohongshu, command: note, args: ["{target}"]}
+        backends: []
       comments:
         description: 读取笔记评论
         requires: login
+        ui_fallback: true
+        risk: high
         params: [target, limit]
-        backends:
-          - {label: opencli-xiaohongshu, site: xiaohongshu, command: comments, args: ["{target}"], limit: true}
+        backends: []
 
   zhihu:
     level: optional
@@ -399,15 +411,17 @@ channels:
       search:
         description: 搜索问题
         requires: login
+        ui_fallback: true
+        risk: high
         params: [query, limit]
-        backends:
-          - {label: opencli-zhihu, site: zhihu, command: search, args: ["{query}"], limit: true}
+        backends: []
       read:
         description: 读取问题
         requires: login
+        ui_fallback: true
+        risk: high
         params: [target, limit]
-        backends:
-          - {label: opencli-zhihu, site: zhihu, command: question, args: ["{target}"], limit: true}
+        backends: []
 
   douyin:
     level: optional
@@ -423,21 +437,24 @@ channels:
       search:
         description: 搜索视频
         requires: login
+        ui_fallback: true
+        risk: high
         params: [query, limit]
-        backends:
-          - {label: opencli-douyin, site: douyin, command: search, args: ["{query}"], limit: true}
+        backends: []
       videos:
         description: 用户视频列表
         requires: login
+        ui_fallback: true
+        risk: high
         params: [target, limit]
-        backends:
-          - {label: opencli-douyin, site: douyin, command: user-videos, args: ["{target}"], limit: true}
+        backends: []
       detail:
         description: 视频详情
         requires: login
+        ui_fallback: true
+        risk: high
         params: [target]
-        backends:
-          - {label: opencli-douyin, site: douyin, command: detail, args: ["{target}"]}
+        backends: []
 
   # ── experimental ────────────────────────────────────────
   producthunt:
@@ -475,8 +492,8 @@ channels:
         requires: none
         params: [target]
         backends:
-          - {label: http-read, tier: p0}
-          - {label: jina, tier: p2, key: search.jina.api_key}
+          - {label: http-read, tier: p1}
+          - {label: jina, tier: p1, key: search.jina.api_key}
           - {label: firecrawl-scrape, tier: p2, requires_key: true, key: search.firecrawl.api_key}
           - {label: tavily-extract, tier: p2, requires_key: true, key: search.tavily.api_key}
           - {label: brightdata-unlocker, tier: p2, requires_key: true, keys: [search.brightdata.api_token, search.brightdata.unlocker_zone]}
@@ -497,8 +514,8 @@ channels:
         requires: none
         params: [target]
         backends:
-          - {label: http-read, tier: p0}
-          - {label: jina, tier: p2, key: search.jina.api_key}
+          - {label: http-read, tier: p1}
+          - {label: jina, tier: p1, key: search.jina.api_key}
           - {label: firecrawl-scrape, tier: p2, requires_key: true, key: search.firecrawl.api_key}
           - {label: tavily-extract, tier: p2, requires_key: true, key: search.tavily.api_key}
           - {label: brightdata-unlocker, tier: p2, requires_key: true, keys: [search.brightdata.api_token, search.brightdata.unlocker_zone]}
@@ -519,8 +536,8 @@ channels:
         requires: none
         params: [target]
         backends:
-          - {label: http-read, tier: p0}
-          - {label: jina, tier: p2, key: search.jina.api_key}
+          - {label: http-read, tier: p1}
+          - {label: jina, tier: p1, key: search.jina.api_key}
           - {label: firecrawl-scrape, tier: p2, requires_key: true, key: search.firecrawl.api_key}
           - {label: tavily-extract, tier: p2, requires_key: true, key: search.tavily.api_key}
           - {label: brightdata-unlocker, tier: p2, requires_key: true, keys: [search.brightdata.api_token, search.brightdata.unlocker_zone]}

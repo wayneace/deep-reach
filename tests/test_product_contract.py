@@ -14,7 +14,10 @@ class ProductContractTest(unittest.TestCase):
             self.assertTrue(channel.description, channel.name)
             for action in channel.actions:
                 self.assertIn(action.requires, {"none", "login", "key"})
-                self.assertTrue(action.backends, f"{channel.name}/{action.name}")
+                self.assertTrue(
+                    action.backends or action.ui_fallback,
+                    f"{channel.name}/{action.name}",
+                )
 
     def test_planned_channels_are_not_visible(self):
         registry = load_registry()

@@ -36,7 +36,8 @@ class DoctorTest(unittest.TestCase):
         registry = load_registry()
         report = build_doctor_report(registry, Keys({}), client=FakeClient())
         rows = {row["name"]: row for row in report["channels"]}
-        self.assertEqual(rows["bilibili"]["status"], "ready")
+        self.assertEqual(rows["bilibili"]["status"], "degraded")
+        self.assertIn("subtitle", rows["bilibili"]["next_action"])
         self.assertEqual(rows["x"]["status"], "needs_login")
         self.assertTrue(rows["x"]["next_action"])
         self.assertIn("planned", report["summary"])
