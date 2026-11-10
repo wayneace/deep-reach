@@ -27,8 +27,8 @@ class ProductContractTest(unittest.TestCase):
 
     def test_deferred_channels_are_not_planned(self):
         planned = load_registry().planned
-        self.assertNotIn("1688", planned)
-        self.assertNotIn("sellersprite", planned)
+        for name in ("1688", "sellersprite", "tieba", "hupu"):
+            self.assertNotIn(name, planned)
 
     def test_parser_builds_channel_action(self):
         registry = load_registry()

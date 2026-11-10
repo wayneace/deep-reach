@@ -670,23 +670,3 @@ channels:
     key: null
     requires_key: false
     actions: {}
-
-  tieba:
-    level: planned
-    status: planned
-    category: social
-    description: 贴吧
-    next_action: 后续版本
-    key: null
-    requires_key: false
-    actions: {}
-
-  hupu:
-    level: planned
-    status: planned
-    category: social
-    description: 虎扑
-    next_action: 后续版本
-    key: null
-    requires_key: false
-    actions: {}

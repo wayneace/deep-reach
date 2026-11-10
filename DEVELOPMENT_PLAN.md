@@ -99,8 +99,6 @@ deep-reach\
         douyin.py
         bilibili.py
         xueqiu.py
-        tieba.py
-        hupu.py
       commerce/
         amazon.py
         ebay.py
@@ -433,8 +431,6 @@ CONFIG_ERROR YAML/格式错误（整体启动失败）
 | `zhihu` | `opencli zhihu search/question/answer-comments` | 登录态 |
 | `weibo` | `opencli weibo hot/search/user-posts/comments` | 登录态 |
 | `douyin` | `opencli douyin profile/videos/hashtag` | 搜索命令以 `opencli list douyin` 为准 |
-| `tieba` | `opencli tieba search/posts/read` | 公开+登录 |
-| `hupu` | `opencli hupu search/detail` | 公开+登录 |
 
 ### 5.3 Amazon / 选品
 
@@ -774,7 +770,6 @@ Reader: jina
 - [ ] B站：`bilibili-public` → `bili-cli` → OpenCLI 字幕。
 - [ ] 雪球：`tencent-quote` → `xueqiu-public` → OpenCLI。
 - [ ] Amazon、Kickstarter。
-- [ ] 贴吧、虎扑。
 
 **验收**：B站/雪球无 key 可用；Amazon/Kickstarter 通过 OpenCLI/浏览器可用。
 

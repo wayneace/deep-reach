@@ -91,7 +91,7 @@ uv run deep-reach capabilities  # 每个渠道能做什么、不能做什么
 | `default` | 装好就能跑：B站、YouTube、微博 hot、雪球、Amazon、web、GitHub、V2EX |
 | `optional` | 需要登录或免费 key：X、Reddit、小红书、知乎、抖音、eBay、Etsy、USPTO、EPO |
 | `experimental` | 可能不稳定：Product Hunt、Kickstarter、CNIPA、版权 |
-| `planned` | 只在 roadmap：KIPRIS、EUIPO、Hacker News、贴吧、虎扑 |
+| `planned` | 只在 roadmap：KIPRIS、EUIPO、Hacker News |
 
 ## 常用命令
 
