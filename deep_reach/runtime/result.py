@@ -32,6 +32,7 @@ CONFIG_ERROR = "CONFIG_ERROR"
 WRITE_BLOCKED = "WRITE_BLOCKED"
 BUSY = "BUSY"
 NEED_UI = "NEED_UI"
+POLICY_BLOCKED = "POLICY_BLOCKED"
 
 #: Codes where trying another backend cannot help. RATE_LIMITED and BUSY are
 #: final on purpose, matching Agent-Reach: a platform rate limit or a full
@@ -51,6 +52,7 @@ FINAL_CODES = frozenset(
         SOURCE_DISABLED,
         WRITE_BLOCKED,
         NEED_UI,
+        POLICY_BLOCKED,
     }
 )
 
@@ -70,6 +72,7 @@ RETRYABLE_CODES = frozenset(
 #: one. Logging in or waiting for a rate limit is more useful than "broken".
 ERROR_PRIORITY = (
     PLATFORM_BLOCKED,
+    POLICY_BLOCKED,
     NEED_LOGIN,
     NEED_UI,
     RATE_LIMITED,
@@ -117,6 +120,10 @@ DEFAULT_HINTS = {
         "No automatic backend can complete this action. Use `deep-reach bsk ...` "
         "(guarded); bsk may use all capabilities, including writes. Do not fetch "
         "site internal APIs directly; confirm user intent before destructive writes."
+    ),
+    POLICY_BLOCKED: (
+        "The bsk guard blocked a direct internal-API call. Use observe/click/"
+        "extract/network reads instead of fetch/XHR or debug replay."
     ),
 }
 

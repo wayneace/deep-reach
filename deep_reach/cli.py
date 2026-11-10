@@ -21,6 +21,7 @@ from typing import Optional
 from . import __version__
 from .backends.brave import register_brave_backend
 from .backends.brightdata import register_brightdata_backends
+from .backends.bsk_guard import run_bsk
 from .backends.ebay import register_ebay_backend
 from .backends.epo import register_epo_backend
 from .backends.etsy import register_etsy_backend
@@ -534,6 +535,10 @@ def cmd_profile(args: argparse.Namespace) -> int:
     return 2
 
 
+def cmd_bsk(args: argparse.Namespace) -> int:
+    return run_bsk(list(args.bsk_args))
+
+
 def cmd_about(args: argparse.Namespace) -> int:
     print(f"{NAME} {__version__}")
     print(TAGLINE)
@@ -699,6 +704,13 @@ def build_parser(registry) -> argparse.ArgumentParser:
     p_set.set_defaults(func=cmd_profile)
     p_launch = profile_sub.add_parser("launch")
     p_launch.set_defaults(func=cmd_profile)
+
+    bsk = sub.add_parser(
+        "bsk",
+        help="guarded bsk passthrough (blocks direct internal-API calls)",
+    )
+    bsk.add_argument("bsk_args", nargs=argparse.REMAINDER)
+    bsk.set_defaults(func=cmd_bsk)
 
     about = sub.add_parser("about", help="product promises and non-goals")
     about.set_defaults(func=cmd_about)
