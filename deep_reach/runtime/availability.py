@@ -20,6 +20,7 @@ from typing import Optional
 
 from ..backends.bsk_guard import BSK_INSTALL_HINT, bsk_available
 from ..channels.base import Action, BackendSpec, Channel
+from .browser_config import normalize_opencli_profile
 from .keys import Keys, default_keys_path, template_path
 
 OPENCLI_BIN_ENV = "DEEP_REACH_OPENCLI_BIN"
@@ -41,12 +42,15 @@ class Environment:
     opencli_installed: bool
     browser_connected: Optional[bool] = None
     bsk_installed: bool = False
+    opencli_profile_configured: bool = False
 
     @property
     def opencli_available(self) -> bool:
+        if not (self.opencli_installed and self.opencli_profile_configured):
+            return False
         if self.browser_connected is None:
-            return self.opencli_installed
-        return bool(self.browser_connected and self.opencli_installed)
+            return True
+        return bool(self.browser_connected)
 
 
 @dataclass(frozen=True)
@@ -76,14 +80,19 @@ def detect_environment(
         opencli_installed=installed,
         browser_connected=connected,
         bsk_installed=bsk_available(),
+        opencli_profile_configured=bool(
+            normalize_opencli_profile(keys.get("browser.opencli_profile"))
+        ),
     )
 
 
 def environment_from_profile(keys: Keys, profile: dict) -> Environment:
     """Build an environment view from an already-collected OpenCLI profile."""
     connected = bool(profile.get("connected"))
+    configured = bool(profile.get("configured"))
     installed = bool(
         connected
+        or configured
         or profile.get("daemon")
         or profile.get("cli_version")
         or _opencli_installed()
@@ -93,6 +102,7 @@ def environment_from_profile(keys: Keys, profile: dict) -> Environment:
         opencli_installed=installed,
         browser_connected=connected,
         bsk_installed=bsk_available(),
+        opencli_profile_configured=configured,
     )
 
 
@@ -109,7 +119,9 @@ def backend_unavailable_reason(
     if spec.label.startswith("opencli-") and not env.opencli_available:
         if not env.opencli_installed:
             return "OpenCLI is not installed"
-        return "OpenCLI browser is not connected"
+        if not env.opencli_profile_configured:
+            return "OpenCLI has no dedicated profile configured"
+        return "OpenCLI dedicated profile is not connected"
     return None
 
 
@@ -206,6 +218,29 @@ def _bsk_hint(actions: tuple[str, ...], env: Optional[Environment]) -> str:
     )
 
 
+def _opencli_hint(env: Optional[Environment]) -> str:
+    if env is None or not env.opencli_installed:
+        return (
+            f"安装 OpenCLI（`{OPENCLI_INSTALL_COMMAND}`），"
+            "然后运行 `deep-reach profile launch`，在专用窗口安装 OpenCLI "
+            "Browser Bridge 扩展，再 `deep-reach profile set <contextId>`；"
+            "完成后运行 `deep-reach doctor`"
+        )
+    if not env.opencli_profile_configured:
+        return (
+            "运行 `deep-reach profile launch`，在专用 Chrome 窗口安装/启用 "
+            "OpenCLI Browser Bridge 扩展，然后 "
+            "`deep-reach profile set <contextId>`；完成后运行 "
+            "`deep-reach doctor`"
+        )
+    if env.browser_connected is False:
+        return (
+            "打开 Deep-Reach 专用 Chrome profile 并确认 OpenCLI Browser "
+            "Bridge 扩展已启用；运行 `deep-reach profile status` 检查 contextId"
+        )
+    return "运行 `deep-reach doctor` 查看原因"
+
+
 def next_action_for(
     channel: Channel,
     availability: ChannelAvailability,
@@ -223,16 +258,7 @@ def next_action_for(
         has_auto = any(action.backends for action in channel.actions)
         if ui_actions and not has_auto:
             return ui_hint
-        if env is not None and not env.opencli_installed:
-            base = (
-                f"安装 OpenCLI（`{OPENCLI_INSTALL_COMMAND}`），"
-                "然后运行 `deep-reach doctor`"
-            )
-        else:
-            base = (
-                "安装/启用 OpenCLI Browser Bridge 扩展"
-                f"（{BROWSER_BRIDGE_URL}），然后运行 `deep-reach doctor`"
-            )
+        base = _opencli_hint(env)
         if channel.next_action:
             base = f"{base}；安装后：{channel.next_action}"
         return f"{base}；{ui_hint}" if ui_hint else base

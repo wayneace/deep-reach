@@ -23,6 +23,7 @@ from deep_reach.backends.producthunt import register_producthunt_backend
 from deep_reach.backends.public import register_public_backends
 from deep_reach.backends.uspto import register_uspto_backend
 from deep_reach.backends.v2ex import register_v2ex_backend
+from deep_reach.runtime.browser_config import normalize_opencli_profile
 from deep_reach.backends.xueqiu import register_xueqiu_backends
 from deep_reach.channels import load_registry
 from deep_reach.runtime.dispatch import run_action
@@ -55,7 +56,7 @@ def main() -> int:
 
     registry = load_registry()
     keys = Keys.load()
-    profile = keys.get("browser.opencli_profile") or "auto"
+    profile = normalize_opencli_profile(keys.get("browser.opencli_profile"))
     register_opencli_backends(OpenCLIClient(profile=profile))
     register_jina_backend(keys)
     register_http_backends()

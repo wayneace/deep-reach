@@ -57,6 +57,7 @@ from .runtime.dispatch import run_action
 from .runtime.doctor import build_doctor_report, format_doctor_text
 from .runtime.keys import Keys, template_path
 from .runtime.profile import launch as launch_profile
+from .runtime.secure_paths import ensure_private_dir
 from .runtime.profile import profile_dir, set_context, status as profile_status
 from .runtime.result import ReachError, dump, redact_text
 
@@ -510,11 +511,28 @@ def cmd_setup(args: argparse.Namespace) -> int:
     checks.append(("template", str(template), "ok" if template.is_file() else "missing"))
 
     profile = profile_status(keys)
-    connected = bool(profile.get("opencli", {}).get("connected"))
+    opencli_state = profile.get("opencli", {})
+    connected = bool(opencli_state.get("connected"))
+    configured = bool(opencli_state.get("configured"))
+    checks.append(
+        (
+            "profile",
+            (
+                f"dedicated ({opencli_state.get('context_id')})"
+                if configured
+                else "not configured"
+            ),
+            "ok" if configured else "missing",
+        )
+    )
     checks.append(
         (
             "browser",
-            f"connected ({profile['opencli'].get('context_id')})" if connected else "not connected",
+            (
+                f"connected ({opencli_state.get('context_id')})"
+                if connected
+                else "not connected"
+            ),
             "ok" if connected else "missing",
         )
     )
@@ -526,27 +544,36 @@ def cmd_setup(args: argparse.Namespace) -> int:
     print()
     keys_exists = bool(keys.path and keys.path.exists())
     if not keys_exists and keys.path is not None:
-        keys.path.parent.mkdir(parents=True, exist_ok=True)
+        if keys.path.parent == Path.home() / ".deep-reach":
+            ensure_private_dir(keys.path.parent)
+        else:
+            keys.path.parent.mkdir(parents=True, exist_ok=True)
     printed_next = False
     if not opencli:
         print("Next: install OpenCLI:")
         print(f"  {OPENCLI_INSTALL_COMMAND}")
-        print("Then install/enable the Browser Bridge extension:")
-        print("  1. opencli.info/download or Chrome Web Store")
-        print("  2. chrome://extensions → enable")
-        print("  3. deep-reach doctor")
+        print("Then create a dedicated browser profile:")
+        print("  1. deep-reach profile launch")
+        print("  2. install/enable the OpenCLI extension in that window")
+        print("  3. deep-reach profile status")
+        print("  4. deep-reach profile set <contextId>")
+        printed_next = True
+    elif not configured:
+        print("Next: create a dedicated browser profile:")
+        print("  1. deep-reach profile launch")
+        print("  2. install/enable the OpenCLI extension in that window")
+        print("  3. deep-reach profile status")
+        print("  4. deep-reach profile set <contextId>")
         printed_next = True
     elif not connected:
-        print("Next: install/enable the OpenCLI Browser Bridge extension:")
-        print("  1. opencli.info/download or Chrome Web Store")
-        print("  2. chrome://extensions → enable")
-        print("  3. deep-reach doctor")
+        print("Next: open the Deep-Reach dedicated Chrome profile and enable the extension.")
+        print("Then run: deep-reach profile status")
         printed_next = True
     if not keys_exists:
         if printed_next:
             print()
         print(redact_text(f"Keys: optional — copy {template} to {keys.path}."))
-    if opencli and connected:
+    if opencli and configured and connected:
         print("Next: deep-reach doctor")
     return 0
 
@@ -564,13 +591,20 @@ def cmd_profile(args: argparse.Namespace) -> int:
         else:
             print(redact_text(f"setting: {payload.get('setting')}"))
             opencli = payload.get("opencli", {})
+            print(redact_text(f"configured: {opencli.get('configured')}"))
             print(redact_text(f"connected: {opencli.get('connected')}"))
             print(redact_text(f"contextId: {opencli.get('context_id')}"))
+            print(redact_text(f"profileIds: {opencli.get('profile_ids')}"))
             print(redact_text(f"extension: {opencli.get('extension_version')}"))
+            print(redact_text(f"error: {opencli.get('error')}"))
             print(redact_text(f"dedicated dir: {payload.get('dedicated_dir')}"))
         return 0
     if args.profile_command == "set":
-        path = set_context(args.context_id)
+        try:
+            path = set_context(args.context_id)
+        except ReachError as exc:
+            print(f"{exc.code}: {exc.message}", file=sys.stderr)
+            return 2
         print(redact_text(f"opencli_profile set to {args.context_id} in {path}"))
         return 0
     if args.profile_command == "launch":

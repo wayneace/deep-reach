@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import stat
 from typing import Optional
 
 from ..backends.bsk_guard import BSK_INSTALL_HINT
@@ -9,15 +11,16 @@ from ..backends.opencli import RECOMMENDED_VERSION, OpenCLIClient, version_statu
 from ..channels.base import TIERS
 from ..channels.registry import Registry
 from . import health, quota
-from .browser_config import normalize_opencli_profile
 from .availability import (
     OPENCLI_INSTALL_COMMAND,
+    _opencli_hint,
     action_risk,
     channel_availability,
     channel_risk,
     environment_from_profile,
     next_action_for,
 )
+from .browser_config import normalize_opencli_profile
 from .keys import Keys, template_path
 from .result import NEED_SETUP, ReachError, redact_text
 
@@ -117,9 +120,36 @@ def build_doctor_report(
     }
     template = template_path()
     keys_exists = bool(keys.path and keys.path.exists())
+    keys_mode = None
+    keys_secure = True
+    if keys_exists and os.name != "nt" and keys.path is not None:
+        try:
+            raw_mode = stat.S_IMODE(keys.path.stat().st_mode)
+            keys_mode = f"{raw_mode:03o}"
+            keys_secure = not (raw_mode & 0o077)
+        except OSError:
+            keys_secure = False
+    profile = dict(profile)
+    profile.setdefault("setting", normalize_opencli_profile(
+        keys.get("browser.opencli_profile")
+    ))
+    profile.setdefault("configured", bool(profile["setting"]))
+    profile.setdefault("connected", False)
+    profile.setdefault("context_id", profile["setting"] or None)
+    profile.setdefault("profile_ids", [])
+    profile.setdefault("profiles", [])
+    profile["window"] = "background"
+    profile["next"] = (
+        _opencli_hint(env)
+        if not profile["connected"] or not profile["configured"]
+        else ""
+    )
     return {
         "keys_file": str(keys.path),
         "keys_file_exists": keys_exists,
+        "keys_file_mode": keys_mode,
+        "keys_file_secure": keys_secure,
+        "keys_file_note": keys.permission_note,
         "keys_template": str(template),
         "keys_hint": (
             ""
@@ -154,6 +184,13 @@ def format_doctor_text(report: dict) -> str:
     lines.append(f"keys:     {report.get('keys_file')} ({'found' if report.get('keys_file_exists') else 'missing'})")
     if not report.get("keys_file_exists") and report.get("keys_hint"):
         lines.append(f"          → {report['keys_hint']}")
+    if report.get("keys_file_exists") and not report.get("keys_file_secure", True):
+        lines.append(
+            f"          warning: keys file mode {report.get('keys_file_mode')}; "
+            "expected 600"
+        )
+    if report.get("keys_file_note"):
+        lines.append(f"          note: {report['keys_file_note']}")
     if opencli.get("missing"):
         lines.append(
             f"opencli:  not installed "
@@ -168,7 +205,7 @@ def format_doctor_text(report: dict) -> str:
         lines.append(f"          → {opencli['action']}")
     if profile.get("connected"):
         lines.append(
-            f"browser:  connected (contextId {profile.get('context_id')}, "
+            f"browser:  dedicated {profile.get('context_id')} (connected, "
             f"extension {profile.get('extension_version')})"
         )
         if profile.get("extension_outdated"):
@@ -184,7 +221,14 @@ def format_doctor_text(report: dict) -> str:
             if opencli.get("missing")
             else profile.get("error", "install the Browser Bridge extension")
         )
-        lines.append(f"browser:  not connected ({detail})")
+        state = "not configured" if not profile.get("configured") else "not connected"
+        lines.append(f"browser:  {state} ({detail})")
+        if profile.get("next"):
+            lines.append(f"          → {profile['next']}")
+    lines.append(
+        "browser:  window background "
+        "(OpenCLI Browser Bridge has no true headless mode)"
+    )
     bsk = report.get("bsk") or {}
     bsk_state = "installed" if bsk.get("installed") else "not installed"
     lines.append(

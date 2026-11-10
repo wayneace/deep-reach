@@ -1,5 +1,7 @@
+import os
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from deep_reach.channels import load_registry
 from deep_reach.channels.base import Action, BackendSpec, Channel, Param
@@ -8,6 +10,7 @@ from deep_reach.runtime.availability import (
     action_risk,
     channel_availability,
     channel_risk,
+    detect_environment,
     next_action_for,
 )
 from deep_reach.runtime.keys import Keys
@@ -22,12 +25,13 @@ def channel(declared, backends, name="demo"):
     )
 
 
-def env(installed=True, connected=None, data=None, bsk=False):
+def env(installed=True, connected=None, data=None, bsk=False, profile_configured=True):
     return Environment(
         keys=Keys(data or {}),
         opencli_installed=installed,
         browser_connected=connected,
         bsk_installed=bsk,
+        opencli_profile_configured=profile_configured,
     )
 
 
@@ -72,6 +76,30 @@ class AvailabilityTest(unittest.TestCase):
         )
         self.assertEqual(result.status, "needs_setup")
         self.assertFalse(result.runnable)
+
+    def test_opencli_without_profile_is_needs_setup(self):
+        result = channel_availability(
+            channel("ready", [BackendSpec("opencli-demo", "search")]),
+            env(installed=True, profile_configured=False),
+        )
+        self.assertEqual(result.status, "needs_setup")
+        self.assertFalse(result.runnable)
+
+    def test_opencli_with_profile_and_connection_is_ready(self):
+        result = channel_availability(
+            channel("ready", [BackendSpec("opencli-demo", "search")]),
+            env(installed=True, connected=True, profile_configured=True),
+        )
+        self.assertEqual(result.status, "ready")
+
+    def test_env_only_profile_counts_as_configured(self):
+        with mock.patch.dict(
+            os.environ, {"DEEP_REACH_BROWSER_OPENCLI_PROFILE": "ctx-1234"}
+        ):
+            detected = detect_environment(
+                Keys({"browser": {"opencli_profile": ""}})
+            )
+        self.assertTrue(detected.opencli_profile_configured)
 
     def test_partial_actions_are_degraded(self):
         ch = Channel(
@@ -242,6 +270,7 @@ class AvailabilityTest(unittest.TestCase):
             keys=Keys({}, path=key_path),
             opencli_installed=True,
             browser_connected=True,
+            opencli_profile_configured=True,
         )
         result = channel_availability(ch, environment)
         self.assertEqual(result.status, "degraded")

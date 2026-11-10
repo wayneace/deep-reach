@@ -124,7 +124,13 @@ class SetupTextTest(unittest.TestCase):
                 return_value=Keys({}, path=key_path),
             ), mock.patch(
                 "deep_reach.cli.profile_status",
-                return_value={"opencli": {"connected": False}},
+                return_value={
+                    "opencli": {
+                        "connected": False,
+                        "configured": False,
+                        "context_id": None,
+                    }
+                },
             ), mock.patch.dict("os.environ", {"DEEP_REACH_OPENCLI_BIN": ""}):
                 buffer = io.StringIO()
                 with redirect_stdout(buffer):
@@ -148,7 +154,13 @@ class SetupTextTest(unittest.TestCase):
                 return_value=Keys({}, path=key_path),
             ), mock.patch(
                 "deep_reach.cli.profile_status",
-                return_value={"opencli": {"connected": True, "context_id": "ctx"}},
+                return_value={
+                    "opencli": {
+                        "connected": True,
+                        "configured": True,
+                        "context_id": "ctx",
+                    }
+                },
             ), mock.patch.dict("os.environ", {"DEEP_REACH_OPENCLI_BIN": ""}):
                 buffer = io.StringIO()
                 with redirect_stdout(buffer):

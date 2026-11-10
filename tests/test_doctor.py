@@ -18,11 +18,28 @@ class FakeClient:
 
     def profile_status(self):
         if not self.connected:
-            return {"connected": False, "error": "opencli is not installed"}
+            return {
+                "setting": "",
+                "configured": False,
+                "connected": False,
+                "context_id": None,
+                "profile_ids": [],
+                "profiles": [],
+                "window": "background",
+                "error": "opencli is not installed",
+            }
         return {
+            "setting": "test-context",
+            "configured": True,
             "connected": True,
             "context_id": "test-context",
+            "profile_ids": ["test-context"],
+            "profiles": [
+                {"contextId": "test-context", "extensionVersion": "1.0.26"}
+            ],
+            "window": "background",
             "extension_version": "1.0.26",
+            "error": "",
         }
 
 
@@ -74,6 +91,34 @@ class DoctorTest(unittest.TestCase):
         self.assertIn("profile current", text)
         self.assertIn("warning:", text)
         self.assertIn("p3", text)
+
+    def test_doctor_reports_keys_mode_and_profile_schema(self):
+        registry = load_registry()
+        report = build_doctor_report(registry, Keys({}), client=FakeClient())
+        self.assertIn("keys_file_mode", report)
+        self.assertIn("keys_file_secure", report)
+        profile = report["profile"]
+        for name in (
+            "setting",
+            "configured",
+            "connected",
+            "context_id",
+            "profile_ids",
+            "profiles",
+            "window",
+            "error",
+            "next",
+        ):
+            self.assertIn(name, profile)
+        self.assertEqual(profile["window"], "background")
+
+    def test_doctor_text_warns_when_profile_is_unconfigured(self):
+        report = build_doctor_report(
+            load_registry(), Keys({}), client=FakeClient(connected=False)
+        )
+        text = format_doctor_text(report)
+        self.assertIn("not configured", text)
+        self.assertIn("profile launch", text)
 
     def test_bsk_guard_can_be_disabled(self):
         registry = load_registry()
