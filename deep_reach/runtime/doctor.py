@@ -18,7 +18,7 @@ from .availability import (
     next_action_for,
 )
 from .keys import Keys, template_path
-from .result import NEED_SETUP, ReachError
+from .result import NEED_SETUP, ReachError, redact_text
 
 LEVEL_ORDER = ("default", "optional", "experimental")
 
@@ -267,4 +267,4 @@ def format_doctor_text(report: dict) -> str:
         )
     else:
         lines.append("quota:    0 used today")
-    return "\n".join(lines)
+    return redact_text("\n".join(lines))

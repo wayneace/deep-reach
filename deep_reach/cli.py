@@ -56,7 +56,7 @@ from .runtime.doctor import build_doctor_report, format_doctor_text
 from .runtime.keys import Keys, template_path
 from .runtime.profile import launch as launch_profile
 from .runtime.profile import profile_dir, set_context, status as profile_status
-from .runtime.result import ReachError, dump
+from .runtime.result import ReachError, dump, redact_text
 
 JSON_DEFAULT = True
 
@@ -121,9 +121,9 @@ def _text_summary(env: dict) -> str:
                 lines.append(f"  {url}")
         if len(items) > 5:
             lines.append(f"... {len(items) - 5} more")
-        return "\n".join(lines)
+        return redact_text("\n".join(lines))
     error = env.get("error") or {}
-    return (
+    return redact_text(
         f"{env.get('channel')}/{env.get('action')}: {error.get('code')}\n"
         f"{error.get('message')}\n"
         f"→ {error.get('hint')}"
@@ -175,18 +175,24 @@ def cmd_channel_help(args: argparse.Namespace) -> int:
     if channel is None:
         print(f"unknown channel: {args.channel_name}", file=sys.stderr)
         return 2
-    print(f"{channel.name} [{channel.level}/{channel.status}] {channel.description}")
+    print(
+        redact_text(
+            f"{channel.name} [{channel.level}/{channel.status}] {channel.description}"
+        )
+    )
     for action in channel.actions:
         params = ", ".join(p.name for p in action.params) or "-"
         tiers = "+".join(action.tiers) or "-"
         print(
-            f"  {action.name:<12} requires={action.requires:<6} "
-            f"tiers={tiers:<7} params={params}"
+            redact_text(
+                f"  {action.name:<12} requires={action.requires:<6} "
+                f"tiers={tiers:<7} params={params}"
+            )
         )
     if channel.limits:
-        print(f"  limits: {channel.limits}")
+        print(redact_text(f"  limits: {channel.limits}"))
     if channel.next_action:
-        print(f"  next: {channel.next_action}")
+        print(redact_text(f"  next: {channel.next_action}"))
     return 0
 
 
@@ -273,12 +279,14 @@ def cmd_channels(args: argparse.Namespace) -> int:
                 or "-"
             )
             print(
-                f"  {channel.name:<14} {availability.status:<13} "
-                f"risk={channel_risk(channel):<6} {actions}"
+                redact_text(
+                    f"  {channel.name:<14} {availability.status:<13} "
+                    f"risk={channel_risk(channel):<6} {actions}"
+                )
             )
             hint = next_action_for(channel, availability, env)
             if availability.status not in {"ready", "experimental"} and hint != "-":
-                print(f"      → {hint}")
+                print(redact_text(f"      → {hint}"))
         print()
     print("Use `deep-reach <channel> <action> --help` for arguments.")
     print("Status is environment-aware; run `deep-reach doctor` for browser/key details.")
@@ -511,7 +519,7 @@ def cmd_setup(args: argparse.Namespace) -> int:
     print("Deep-Reach setup")
     print()
     for name, value, state in checks:
-        print(f"  {name:<10} {state:<18} {value}")
+        print(redact_text(f"  {name:<10} {state:<18} {value}"))
     print()
     keys_exists = bool(keys.path and keys.path.exists())
     if not keys_exists and keys.path is not None:
@@ -534,7 +542,7 @@ def cmd_setup(args: argparse.Namespace) -> int:
     if not keys_exists:
         if printed_next:
             print()
-        print(f"Keys: optional — copy {template} to {keys.path}.")
+        print(redact_text(f"Keys: optional — copy {template} to {keys.path}."))
     if opencli and connected:
         print("Next: deep-reach doctor")
     return 0
@@ -551,16 +559,16 @@ def cmd_profile(args: argparse.Namespace) -> int:
         if args.json:
             _print_json(payload, pretty=True)
         else:
-            print(f"setting: {payload.get('setting')}")
+            print(redact_text(f"setting: {payload.get('setting')}"))
             opencli = payload.get("opencli", {})
-            print(f"connected: {opencli.get('connected')}")
-            print(f"contextId: {opencli.get('context_id')}")
-            print(f"extension: {opencli.get('extension_version')}")
-            print(f"dedicated dir: {payload.get('dedicated_dir')}")
+            print(redact_text(f"connected: {opencli.get('connected')}"))
+            print(redact_text(f"contextId: {opencli.get('context_id')}"))
+            print(redact_text(f"extension: {opencli.get('extension_version')}"))
+            print(redact_text(f"dedicated dir: {payload.get('dedicated_dir')}"))
         return 0
     if args.profile_command == "set":
         path = set_context(args.context_id)
-        print(f"opencli_profile set to {args.context_id} in {path}")
+        print(redact_text(f"opencli_profile set to {args.context_id} in {path}"))
         return 0
     if args.profile_command == "launch":
         result = launch_profile()

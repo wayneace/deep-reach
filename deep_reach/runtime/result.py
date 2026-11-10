@@ -12,9 +12,96 @@ from __future__ import annotations
 
 import datetime as _dt
 import json
+import re
+import urllib.parse
 from typing import Any, Optional
 
 SCHEMA_VERSION = 1
+
+PLACEHOLDER_VALUES = frozenset(
+    {
+        "",
+        "changeme",
+        "change-me",
+        "your_key",
+        "your-key",
+        "placeholder",
+        "...",
+        "<...>",
+    }
+)
+
+_SECRET_VALUES: set[str] = set()
+_SECRET_PATH_RE = re.compile(
+    r"(?:^|[._])(?:api[_-]?key|apikey|api[_-]?token|token|secret|"
+    r"client[_-]?secret|consumer[_-]?key|consumer[_-]?secret|password|"
+    r"passwd|cookie|access[_-]?key|private[_-]?key|credentials?)$",
+    re.IGNORECASE,
+)
+_SENSITIVE_QUERY_RE = re.compile(
+    r"^(key|api[_-]?key|apikey|token|access[_-]?token|secret|password|"
+    r"passwd|cookie|auth|signature|sig)$",
+    re.IGNORECASE,
+)
+
+
+def is_secret_path(dotted: str) -> bool:
+    return bool(_SECRET_PATH_RE.search(dotted))
+
+
+def register_secret(value: object) -> None:
+    if value is None:
+        return
+    text = str(value).strip()
+    if len(text) < 6 or text.lower() in PLACEHOLDER_VALUES:
+        return
+    _SECRET_VALUES.add(text)
+
+
+def clear_secrets() -> None:
+    _SECRET_VALUES.clear()
+
+
+def redact_text(text: object) -> str:
+    result = str(text)
+    for secret in sorted(_SECRET_VALUES, key=len, reverse=True):
+        if secret in result:
+            result = result.replace(secret, "[redacted]")
+    return result
+
+
+def redact_obj(value: object) -> object:
+    if isinstance(value, str):
+        return redact_text(value)
+    if isinstance(value, dict):
+        return {
+            redact_text(key) if isinstance(key, str) else key: redact_obj(item)
+            for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [redact_obj(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(redact_obj(item) for item in value)
+    return value
+
+
+def sanitize_url(url: str) -> str:
+    try:
+        parts = urllib.parse.urlsplit(url)
+    except ValueError:
+        return redact_text(url)
+    if not parts.query:
+        return url
+    pairs = urllib.parse.parse_qsl(parts.query, keep_blank_values=True)
+    cleaned = [
+        (name, "[redacted]") if _SENSITIVE_QUERY_RE.match(name) else (name, value)
+        for name, value in pairs
+    ]
+    if cleaned == pairs:
+        return url
+    return urllib.parse.urlunsplit(
+        parts._replace(query=urllib.parse.urlencode(cleaned, doseq=True))
+    )
 
 # Error codes
 NEED_SETUP = "NEED_SETUP"
@@ -134,14 +221,14 @@ class ReachError(Exception):
     """A failure with a unified code."""
 
     def __init__(self, code: str, message: str, hint: Optional[str] = None):
-        super().__init__(message)
         self.code = code
-        self.message = message
-        self.hint = hint
+        self.message = redact_text(message)
+        self.hint = redact_text(hint) if hint else hint
+        super().__init__(self.message)
 
 
 def _clean(text: object) -> str:
-    return str(text).strip()[:_MAX_MESSAGE_CHARS]
+    return redact_text(str(text).strip()[:_MAX_MESSAGE_CHARS])
 
 
 def now_iso() -> str:
@@ -221,4 +308,4 @@ def envelope(
 
 
 def dump(data: dict, pretty: bool = False) -> str:
-    return json.dumps(data, ensure_ascii=False, indent=2 if pretty else None)
+    return json.dumps(redact_obj(data), ensure_ascii=False, indent=2 if pretty else None)

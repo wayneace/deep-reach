@@ -13,19 +13,25 @@ from typing import Any, Iterable, Optional
 
 import yaml
 
-from .result import CONFIG_ERROR, ReachError
+from .result import (
+    CONFIG_ERROR,
+    PLACEHOLDER_VALUES,
+    ReachError,
+    is_secret_path,
+    register_secret,
+)
 from .secure_paths import ensure_private_dir, tighten_file
 
-PLACEHOLDERS = {
-    "",
-    "changeme",
-    "change-me",
-    "your_key",
-    "your-key",
-    "placeholder",
-    "...",
-    "<...>",
-}
+PLACEHOLDERS = PLACEHOLDER_VALUES
+
+
+def _register_secrets(node: Any, prefix: str = "") -> None:
+    if isinstance(node, dict):
+        for key, value in node.items():
+            name = f"{prefix}.{key}" if prefix else str(key)
+            _register_secrets(value, name)
+    elif is_secret_path(prefix):
+        register_secret(node)
 
 
 def default_keys_path() -> Path:
@@ -49,6 +55,7 @@ class Keys:
         self.data = data or {}
         self.path = path
         self.permission_note = ""
+        _register_secrets(self.data)
 
     @classmethod
     def load(cls, path: Optional[str | Path] = None) -> "Keys":
@@ -91,7 +98,10 @@ class Keys:
     def get(self, dotted: str, default: Any = None) -> Any:
         env_value = os.environ.get(self._env_name(dotted))
         if env_value is not None and str(env_value).strip():
-            return str(env_value).strip()
+            value = str(env_value).strip()
+            if is_secret_path(dotted):
+                register_secret(value)
+            return value
 
         node: Any = self.data
         for part in dotted.split("."):
