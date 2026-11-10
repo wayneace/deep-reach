@@ -36,7 +36,7 @@ deep_reach/
     doctor.py             # 产品级状态与下一步
     profile.py            # 专用 Chrome profile
     setup.py              # 环境检查与安装提示
-    state.py              # 后续：health / quota / cache
+    state.py              # health / quota
   skill/
     SKILL.md              # agent 使用说明
     references/
@@ -145,7 +145,6 @@ deep-reach x search "AI" --limit 5
 - [x] health（后端暂停 60–120s，成功即恢复）
 - [x] 动作级 deadline（HTTP 线程截止，浏览器进程树超时）
 - [x] quota 计数（YouTube / eBay / Etsy 每日额度，v0.7）
-- [ ] 结果 cache
 - [x] live smoke（default 8 渠道通过）
 
 ### R4 — Skill 与能力契约

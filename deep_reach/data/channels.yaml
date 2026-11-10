@@ -690,23 +690,3 @@ channels:
     key: null
     requires_key: false
     actions: {}
-
-  1688:
-    level: planned
-    status: planned
-    category: commerce
-    description: 1688 采购
-    next_action: 后续版本（已有 1688 CLI）
-    key: null
-    requires_key: false
-    actions: {}
-
-  sellersprite:
-    level: planned
-    status: planned
-    category: commerce
-    description: SellerSprite 关键词/市场
-    next_action: 后续版本（网页会员）
-    key: null
-    requires_key: false
-    actions: {}

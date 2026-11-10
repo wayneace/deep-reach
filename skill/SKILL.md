@@ -6,7 +6,7 @@ description: |
   CLI 做搜索、抓取和写操作。当用户要做选品、竞品调研、社媒口碑/差评、Reddit/小红书/
   知乎/微博/B站/抖音搜索、Amazon 商品或榜单、Kickstarter/Indiegogo、USPTO/EPO/
   专利商标检索、GitHub 仓库/issue、V2EX 帖子，或读取公开网页时使用。写操作需用户明确确认；
-  不要用于 Amazon 关键词量/流量数据（用 sellersprite-web）或需要付费 API 的场景。
+  不要用于需要付费 API 的场景；Amazon 关键词量/流量数据不在 Deep-Reach 范围。
 ---
 
 # Deep-Reach

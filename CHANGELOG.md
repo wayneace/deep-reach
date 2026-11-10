@@ -9,7 +9,9 @@ P3 收尾：状态准确性与风险门修正。
 - 移除未生效的 `browser.bsk_profile`。bsk 始终使用当前已连接的浏览器 profile；需要指定实例时直接传 `--browser <id|label>` 给 `bsk session start`。
 - `risk.allow_high` 与高风险警告改为使用 action + backend 的最高风险；`NEED_UI` 的 `meta.risk` 同步。
 - `channels` / `doctor` / `capabilities` 的 action risk 显示 backend 声明的风险。
-- 测试数更新为 253。
+- 移除 1688 / SellerSprite planned 条目；不额外接入 1688 CLI 或 SellerSprite skill，OpenCLI 公开能力保持不变。
+- 明确不做结果 cache；移除 R3 / 下一步中的相关计划。
+- 测试数更新为 254。
 
 ## v0.11.0 — 2026-11-10
 

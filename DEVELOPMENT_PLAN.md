@@ -106,7 +106,6 @@ deep-reach\
         ebay.py
         etsy.py
         producthunt.py
-        sellersprite.py
       crowdfunding/
         indiegogo.py
         kickstarter.py
@@ -157,7 +156,6 @@ deep-reach\
       browser_binding.py
       sessions.py
       tools.py
-      cache.py
       clock.py
 
     skill/
@@ -211,7 +209,7 @@ CLI / Agent
                   → OpenCLI
                   → Jina / Firecrawl / Bright Data
   → result envelope
-  → cache / quota / health
+  → quota / health
 ```
 
 ### 3.2 核心抽象
@@ -446,8 +444,6 @@ CONFIG_ERROR YAML/格式错误（整体启动失败）
 | `ebay` | `ebay-api` → Jina/Firecrawl | 需要（可降级） |
 | `etsy` | `etsy-api` → Jina/Firecrawl | 需要（可降级） |
 | `producthunt` | `producthunt-api` → `opencli producthunt` | 需要（可降级） |
-| `sellersprite` | 浏览器技能 / Jina | 不需要 API |
-| `1688` | 1688 CLI | 不需要 |
 
 ### 5.4 众筹
 
@@ -777,19 +773,19 @@ Reader: jina
 
 - [ ] B站：`bilibili-public` → `bili-cli` → OpenCLI 字幕。
 - [ ] 雪球：`tencent-quote` → `xueqiu-public` → OpenCLI。
-- [ ] Amazon、Kickstarter、1688、SellerSprite。
+- [ ] Amazon、Kickstarter。
 - [ ] 贴吧、虎扑。
 
 **验收**：B站/雪球无 key 可用；Amazon/Kickstarter 通过 OpenCLI/浏览器可用。
 
-### Phase 4 — Reader / 缓存 / 额度（3–4 天）
+### Phase 4 — Reader / 额度（3–4 天）
 
 - [ ] Jina Reader、Firecrawl、Bright Data。
 - [ ] 可选 Brave/Exa 发现（默认关闭）。
-- [ ] SQLite 缓存、去重、quota、health。
+- [ ] 去重、quota、health。
 - [ ] 失败降级和 cooldown。
 
-**验收**：缓存命中不重复调用；额度耗尽自动降级。
+**验收**：额度耗尽自动降级。
 
 ### Phase 5 — Skill / 文档 / 打包（2–3 天）
 
@@ -836,6 +832,6 @@ Reader: jina
 - [ ] YouTube / GitHub / V2EX / eBay / Etsy / Product Hunt / Indiegogo / USPTO / EPO 适配器可用。
 - [ ] 缺 key 时 `DEGRADED`，不崩溃。
 - [ ] 写命令白名单 100% 拦截。
-- [ ] SQLite 缓存 + quota + health 可查。
+- [ ] quota + health 可查。
 - [ ] 空 key / 有 key 两套测试通过。
 - [ ] README + SKILL.md + keys.example.yaml 完整。

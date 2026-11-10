@@ -66,6 +66,8 @@
 - 不接付费 API（X API、Keepa、WIPO 付费、Lens 等）。
 - 不做多用户 / 云服务 / 分布式。
 - 不承诺完整评论树、不承诺理解图片/视频。
+- 不做结果 cache；每次动作走真实上游。
+- 不单独接入 1688 CLI / SellerSprite skill；需要时直接用 OpenCLI 公开能力。
 
 ## 渠道分级
 
@@ -111,7 +113,6 @@ Agent-Reach 是同类产品，Deep-Reach 参考它的 Channel / Action / Backend
 
 ### 下一步
 
-- R3 剩余：结果 cache。
 - 有 key 后：live 校验 eBay / Etsy / Product Hunt / USPTO / EPO。
 - 有 P2 key 后：live 校验 `web search` 和 `web read` 的 Tavily / Brave / Firecrawl / Bright Data。
 - Indiegogo 不做（Cloudflare 拦截，无公开 API）。
@@ -125,4 +126,4 @@ Agent-Reach 是同类产品，Deep-Reach 参考它的 Channel / Action / Backend
 - 缺 key / 缺登录时 `doctor` 能说清楚下一步。
 - P3 bsk 守卫拦截直接内部 API 调用；写操作放行但需确认用户意图。
 - 每个可见渠道都有 capability note。
-- 253 个单元测试 + 1 个 live smoke 脚本。
+- 254 个单元测试 + 1 个 live smoke 脚本。

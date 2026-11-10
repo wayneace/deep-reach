@@ -100,6 +100,6 @@
 
 ## planned
 
-KIPRIS、EUIPO、Hacker News、贴吧、虎扑、1688、SellerSprite。
+KIPRIS、EUIPO、Hacker News、贴吧、虎扑。
 
 这些渠道尚未实现，`deep-reach channels` 不会显示；`deep-reach roadmap` 可见。
