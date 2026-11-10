@@ -42,8 +42,13 @@ def root() -> Path:
 
 
 def _lock_path(name: str) -> Path:
-    folder = root() / "locks"
-    folder.mkdir(parents=True, exist_ok=True)
+    base = root()
+    if base == Path.home() / ".deep-reach":
+        from .secure_paths import ensure_private_dir
+
+        ensure_private_dir(base)
+    folder = base / "locks"
+    folder.mkdir(mode=0o700, parents=True, exist_ok=True)
     digest = hashlib.sha256(name.encode("utf-8")).hexdigest()[:32]
     return folder / f"{digest}.lock"
 

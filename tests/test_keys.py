@@ -40,6 +40,32 @@ class KeysTest(unittest.TestCase):
             self.assertTrue(keys.has("official.github.token"))
             self.assertEqual(keys.get("official.github.token"), "abc123")
 
+    def test_load_tightens_keys_file_to_600(self):
+        if os.name == "nt":
+            self.skipTest("POSIX permissions only")
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "keys.yaml"
+            path.write_text(
+                "official:\n  github:\n    token: abc12345\n", encoding="utf-8"
+            )
+            os.chmod(path, 0o644)
+            keys = Keys.load(path)
+            self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+            self.assertIn("keys.yaml", str(keys.path))
+
+    def test_yaml_error_does_not_echo_secret(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "keys.yaml"
+            path.write_text(
+                'official:\n  github:\n    token: "ghp_SECRETVALUE" [\n',
+                encoding="utf-8",
+            )
+            with self.assertRaises(ReachError) as ctx:
+                Keys.load(path)
+            self.assertNotIn("ghp_SECRETVALUE", ctx.exception.message)
+            self.assertIn("invalid YAML", ctx.exception.message)
+            self.assertIn("line 3", ctx.exception.message)
+
     def test_placeholder_is_missing(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "keys.yaml"

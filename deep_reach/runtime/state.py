@@ -51,7 +51,12 @@ def load() -> dict:
 def save(data: dict) -> None:
     data["version"] = STATE_VERSION
     path = state_path()
-    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.parent == Path.home() / ".deep-reach":
+        from .secure_paths import ensure_private_dir
+
+        ensure_private_dir(path.parent)
+    else:
+        path.parent.mkdir(parents=True, exist_ok=True)
     handle = tempfile.NamedTemporaryFile(
         "w",
         suffix=".tmp",
