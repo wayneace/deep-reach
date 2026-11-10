@@ -67,6 +67,43 @@ class ChannelsJsonTest(unittest.TestCase):
         self.assertIn("risk=high", line)
         self.assertIn("search(bsk)", line)
 
+    def test_text_only_marks_actual_fallback_routes(self):
+        keys = Keys({"xueqiu": {"cookie": "x"}})
+        with mock.patch("deep_reach.cli._load_keys", return_value=keys), mock.patch(
+            "deep_reach.runtime.availability.shutil.which", return_value=None
+        ), mock.patch.dict("os.environ", {"DEEP_REACH_OPENCLI_BIN": ""}):
+            buffer = io.StringIO()
+            with redirect_stdout(buffer):
+                code = cmd_channels(argparse.Namespace(all=False, json=False))
+
+        self.assertEqual(code, 0)
+        line = next(
+            line
+            for line in buffer.getvalue().splitlines()
+            if line.strip().startswith("xueqiu")
+        )
+        self.assertNotIn("hot(bsk)", line)
+        self.assertNotIn("hot_stocks(bsk)", line)
+
+    def test_bsk_only_channel_next_action_omits_opencli_login(self):
+        with mock.patch("deep_reach.cli._load_keys", return_value=Keys({})), mock.patch(
+            "deep_reach.runtime.availability.shutil.which",
+            return_value="/usr/bin/opencli",
+        ), mock.patch.dict("os.environ", {"DEEP_REACH_OPENCLI_BIN": ""}):
+            buffer = io.StringIO()
+            with redirect_stdout(buffer):
+                code = cmd_channels(argparse.Namespace(all=False, json=True))
+
+        self.assertEqual(code, 0)
+        payload = json.loads(buffer.getvalue())
+        row = next(item for item in payload["channels"] if item["name"] == "x")
+        self.assertEqual(row["status"], "needs_login")
+        self.assertIn("deep-reach bsk", row["effective_next_action"])
+        self.assertNotIn("OpenCLI", row["effective_next_action"])
+        self.assertNotIn("Chrome profile", row["effective_next_action"])
+        self.assertNotIn("Chrome profile", row["next_action"])
+        self.assertNotIn("OpenCLI", row["next_action"])
+
 
 class SetupTextTest(unittest.TestCase):
     def test_setup_prompts_opencli_install_when_missing(self):

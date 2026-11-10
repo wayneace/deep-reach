@@ -1,5 +1,7 @@
+import io
 import os
 import unittest
+from contextlib import redirect_stderr
 from unittest import mock
 
 from deep_reach.channels.base import Action, BackendSpec, Channel, Param
@@ -9,7 +11,9 @@ from deep_reach.runtime.result import (
     BAD_INPUT,
     NEED_LOGIN,
     NEED_UI,
+    NOT_FOUND,
     POLICY_BLOCKED,
+    RATE_LIMITED,
     UPSTREAM_BROKEN,
     ReachError,
 )
@@ -240,6 +244,65 @@ class DispatchTest(unittest.TestCase):
         self.assertFalse(env["ok"])
         self.assertEqual(env["error"]["code"], POLICY_BLOCKED)
         self.assertIn("risk.allow_high", env["error"]["message"])
+
+    def _ui_channel(self, backends):
+        return Channel(
+            name="test",
+            category="test",
+            actions=(
+                Action(
+                    name="search",
+                    params=(Param("query"),),
+                    backends=tuple(backends),
+                    ui_fallback=True,
+                    risk="medium",
+                ),
+            ),
+        )
+
+    def test_ui_fallback_does_not_swallow_terminal_error(self):
+        def missing(**kw):
+            raise ReachError(NOT_FOUND, "missing")
+
+        BACKENDS.register("missing", missing)
+        channel = self._ui_channel([BackendSpec("missing", "search")])
+        env = run_action(channel, "search", {"query": "x"}, keys=Keys({}))
+        self.assertFalse(env["ok"])
+        self.assertEqual(env["error"]["code"], NOT_FOUND)
+
+    def test_ui_fallback_does_not_swallow_cooldown(self):
+        channel = self._ui_channel([])
+        with mock.patch(
+            "deep_reach.runtime.dispatch.health.cooldown",
+            return_value={"message": "rate limited", "retry_after_seconds": 42},
+        ):
+            env = run_action(channel, "search", {"query": "x"}, keys=Keys({}))
+        self.assertFalse(env["ok"])
+        self.assertEqual(env["error"]["code"], RATE_LIMITED)
+        self.assertIn("42", env["error"]["hint"])
+
+    def test_terminal_error_wins_over_retryable(self):
+        def broken(**kw):
+            raise ReachError(UPSTREAM_BROKEN, "boom")
+
+        def missing(**kw):
+            raise ReachError(NOT_FOUND, "missing")
+
+        BACKENDS.register("broken", broken)
+        BACKENDS.register("missing", missing)
+        channel = self._ui_channel(
+            [BackendSpec("broken", "search"), BackendSpec("missing", "search")]
+        )
+        env = run_action(channel, "search", {"query": "x"}, keys=Keys({}))
+        self.assertEqual(env["error"]["code"], NOT_FOUND)
+
+    def test_high_risk_action_emits_warning(self):
+        channel = self._login_channel([])
+        stderr = io.StringIO()
+        with redirect_stderr(stderr):
+            env = run_action(channel, "search", {"query": "x"}, keys=Keys({}))
+        self.assertEqual(env["error"]["code"], NEED_UI)
+        self.assertIn("high risk", stderr.getvalue().lower())
 
 
 if __name__ == "__main__":

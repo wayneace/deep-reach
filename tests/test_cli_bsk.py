@@ -3,6 +3,7 @@ from unittest import mock
 
 from deep_reach.channels import load_registry
 from deep_reach.cli import build_parser, main
+from deep_reach.runtime.keys import Keys
 
 
 class CliBskTest(unittest.TestCase):
@@ -14,7 +15,9 @@ class CliBskTest(unittest.TestCase):
         self.assertEqual(args.bsk_args, ["session", "start", "--json"])
 
     def test_main_dispatches_to_guard(self):
-        with mock.patch("deep_reach.cli.run_bsk", return_value=0) as run:
+        with mock.patch(
+            "deep_reach.cli._load_keys", return_value=Keys({})
+        ), mock.patch("deep_reach.cli.run_bsk", return_value=0) as run:
             self.assertEqual(main(["bsk", "status"]), 0)
         run.assert_called_once_with(["status"], guard=True)
 

@@ -241,6 +241,9 @@ def next_action_for(
         return f"{base}；{ui_hint}" if ui_hint else base
 
     if status == "needs_login":
+        has_auto = any(action.backends for action in channel.actions)
+        if ui_actions and not has_auto:
+            return f"{_bsk_hint(ui_actions, env)}；登录请在该 bsk 会话中完成"
         base = (
             channel.next_action
             or f"在 Deep-Reach 专用 Chrome profile 登录 {channel.name} 后重试"

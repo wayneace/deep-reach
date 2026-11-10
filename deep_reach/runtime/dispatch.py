@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import sys
 import threading
 import time
 from typing import Callable, Optional
@@ -116,6 +117,15 @@ def _pick_error(
     if chosen.code == KEY_MISSING and not chosen.hint and keys is not None:
         return ReachError(chosen.code, chosen.message, hint=_keys_hint(keys))
     return chosen
+
+
+def _terminal_error(errors: list[ReachError]) -> Optional[ReachError]:
+    """The highest-priority terminal error, if any backend already decided the outcome."""
+    terminal = [err for err in errors if err.code in FINAL_CODES]
+    if not terminal:
+        return None
+    rank = {code: index for index, code in enumerate(ERROR_PRIORITY)}
+    return min(terminal, key=lambda err: rank.get(err.code, len(rank)))
 
 
 def _call_with_deadline(func: BackendFunc, kwargs: dict, clock: Clock) -> list[dict]:
@@ -247,6 +257,13 @@ def run_action(
                 "high-risk action disabled by risk.allow_high=false",
                 hint="Set risk.allow_high: true in keys.yaml to enable it.",
             ),
+        )
+
+    if action.risk == "high":
+        print(
+            f"warning: {channel.name}/{action_name} is high risk; "
+            "using the real browser profile may trigger platform risk controls.",
+            file=sys.stderr,
         )
 
     if action.requires == "login" and not any(
@@ -451,6 +468,16 @@ def run_action(
             )
     except ReachError as exc:
         errors.append(exc)
+
+    terminal = _terminal_error(errors)
+    if terminal is not None:
+        return envelope(
+            channel=channel.name,
+            action=action_name,
+            elapsed_ms=elapsed(),
+            attempts=attempts,
+            error=terminal,
+        )
 
     if action.ui_fallback:
         return _need_ui(channel, action, attempts, elapsed(), keys)

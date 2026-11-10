@@ -77,4 +77,4 @@ risk:
   # 高风险渠道默认开启，但每次都会警告；设为 false 可整体禁用高风险动作。
   allow_high: true
 
-# B站 / 雪球的登录态由 OpenCLI 专用 profile 管理，不要写在这里。
+# B站 / 雪球的登录态：P0 用 cookie；P3 bsk 使用当前浏览器 profile，不要写在这里。

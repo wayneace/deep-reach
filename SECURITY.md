@@ -1,6 +1,6 @@
 # Security Policy
 
-Deep-Reach is a local, read-only internet access layer. It does not post, comment, like, follow or send direct messages.
+Deep-Reach is a local, tiered internet access layer. It can read and write; write actions must be declared in the channel action and confirmed by the user. P3 `bsk` runs in the user's real browser profile and can perform writes.
 
 ## Reporting a vulnerability
 
@@ -13,7 +13,8 @@ Do not open a public issue for a vulnerability.
 ## In scope
 
 - URL handling in `web read` / `http-read`: scheme allowlist, private-address blocking and redirect validation.
-- Read-only enforcement in the OpenCLI backend.
+- Write-capability declaration: write actions must be explicit in the action definition and must require user confirmation.
+- P3 bsk guard: direct fetch/XHR to site internal APIs, `debug replay`, and network calls inside `evaluate` are blocked; other bsk capabilities, including writes, are allowed.
 - Key handling: `~/.deep-reach/keys.yaml` is local and never committed; POSIX writes through `profile set` are tightened to `0600`.
 - State files: only error codes and timestamps are stored; queries, results, cookies and keys are never written.
 

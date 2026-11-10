@@ -263,9 +263,10 @@ def cmd_channels(args: argparse.Namespace) -> int:
         print(level.upper())
         for channel in sorted(rows, key=lambda c: c.name):
             availability = channel_availability(channel, env)
+            ui_fallback = set(availability.ui_fallback_actions)
             actions = (
                 ", ".join(
-                    f"{a.name}(bsk)" if a.ui_fallback else a.name
+                    f"{a.name}(bsk)" if a.name in ui_fallback else a.name
                     for a in channel.actions
                 )
                 or "-"
@@ -305,12 +306,15 @@ def cmd_capabilities(args: argparse.Namespace) -> int:
                     "level": c.level,
                     "status": c.status,
                     "description": c.description,
+                    "risk": channel_risk(c),
                     "tiers": list(c.tiers),
                     "actions": [
                         {
                             "name": a.name,
                             "requires": a.requires,
                             "tiers": list(a.tiers),
+                            "risk": a.risk or "low",
+                            "ui_fallback": a.ui_fallback,
                             "description": a.description,
                         }
                         for a in c.actions
@@ -326,12 +330,20 @@ def cmd_capabilities(args: argparse.Namespace) -> int:
         return 0
 
     for channel in sorted(channels.values(), key=lambda c: c.name):
-        print(f"{channel.name} [{channel.level}/{channel.status}] {channel.description}")
+        print(
+            f"{channel.name} [{channel.level}/{channel.status}] "
+            f"risk={channel_risk(channel)} {channel.description}"
+        )
         for action in channel.actions:
-            tiers = "+".join(action.tiers) or "-"
+            tiers = "+".join(action.tiers)
+            if action.ui_fallback:
+                tiers = f"{tiers}+bsk" if tiers else "bsk"
+            else:
+                tiers = tiers or "-"
             print(
                 f"  {action.name:<12} requires={action.requires:<6} "
-                f"tiers={tiers:<7} {action.description}"
+                f"tiers={tiers:<7} risk={(action.risk or 'low'):<6} "
+                f"{action.description}"
             )
         if channel.limits:
             print(f"  limits: {channel.limits}")

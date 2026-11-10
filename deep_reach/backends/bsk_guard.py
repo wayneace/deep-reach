@@ -53,7 +53,7 @@ WRITE_TOKENS = frozenset(
 )
 
 DEFAULT_WARNING = (
-    "deep-reach bsk: using the main browser profile; "
+    "deep-reach bsk: using the current browser profile; "
     "the platform may treat automation as abuse."
 )
 
@@ -72,7 +72,8 @@ def policy_violation(args: list[str]) -> Optional[str]:
 
     if "debug" in lowered:
         index = lowered.index("debug")
-        if index + 1 < len(lowered) and lowered[index + 1] == "replay":
+        tail = lowered[index + 1 :]
+        if "replay" in tail or any(token.startswith("--replay") for token in tail):
             return "debug replay re-issues site API requests; use passive debug reads instead"
 
     if "evaluate" in lowered:
@@ -149,10 +150,10 @@ def run_bsk(
     )
     try:
         proc = subprocess.run([binary, *args])
-    except FileNotFoundError:
+    except OSError as exc:
         _print_error(
             NEED_SETUP,
-            "bsk is not installed",
+            f"bsk could not be started: {exc}",
             f"Install BrowserSkill: {BSK_INSTALL_HINT}",
         )
         return 1

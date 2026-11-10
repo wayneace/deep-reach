@@ -10,9 +10,10 @@
 # action.requires: none | login | key
 #
 # backend.tier (default p1); the registry always sorts p0 → p1 → p2:
-#   p0 = 原生免费接口：官方 API 免费层、公开 JSON、原生 CLI（可选 key/登录）
-#   p1 = OpenCLI 浏览器桥：复用已连接 Chrome 的登录态（可选登录）
-#   p2 = 第三方阅读/采集服务：Jina、Firecrawl、Bright Data（可选 key）
+#   p0 = 官方接口：官方 API 免费层、公开 JSON、官方 CLI（可选 key/OAuth）
+#   p1 = 公开网页：直连 HTTP、Jina Reader、OpenCLI 公开命令
+#   p2 = 第三方搜索/采集引擎：Tavily、Brave、Firecrawl、Bright Data（可选 key）
+#   p3 不是 backend tier；action.ui_fallback: true 会返回 NEED_UI，交给 deep-reach bsk。
 #
 # backend.key overrides channel.key; use it when p0 and p2 need different keys.
 # Inside one tier the order below is preserved; across tiers it is enforced.
@@ -28,7 +29,7 @@ channels:
     description: B站搜索、视频、字幕、评论
     limits: 字幕需登录；公开搜索可能触发 -412，自动回退 OpenCLI；不保证完整评论树
     not_supported: [完整评论树, 图片/视频理解]
-    next_action: 字幕需要登录；在浏览器登录 bilibili.com 后重试
+    next_action: 字幕需要登录；用 bsk UI 回退（deep-reach bsk）
     key: null
     requires_key: false
     actions:
@@ -94,7 +95,7 @@ channels:
     description: 微博热搜和搜索
     limits: search 需要登录；hot 不需要
     not_supported: [完整评论树]
-    next_action: search 需要登录 weibo.com；hot 可直接用
+    next_action: hot/read/comments 可公开；search 用 bsk UI 回退（deep-reach bsk）
     key: null
     requires_key: false
     actions:
@@ -131,7 +132,7 @@ channels:
     description: 雪球行情、热帖、热搜股、搜索
     limits: hot/hot_stocks 需要 xueqiu.cookie（几小时过期）；行情优先腾讯公开接口
     not_supported: [完整评论树, 历史 K 线]
-    next_action: 可选填 xueqiu.cookie 解锁雪球 API；否则 hot 自动走 OpenCLI
+    next_action: 可选填 xueqiu.cookie；hot/hot_stocks 失败时用 bsk 回退（deep-reach bsk）
     key: xueqiu.cookie
     requires_key: false
     actions:
@@ -181,7 +182,7 @@ channels:
     description: Amazon 搜索、商品、榜单、评论摘要
     limits: 搜索页可能触发验证码；价格/库存以页面为准
     not_supported: [历史价格曲线, 广告数据]
-    next_action: 使用 OpenCLI；遇到验证码时在浏览器手动完成
+    next_action: 使用 OpenCLI 公开命令；遇到验证码时用 bsk 回退（deep-reach bsk）
     key: null
     requires_key: false
     actions:
@@ -319,7 +320,7 @@ channels:
     description: X / Twitter 搜索和帖子
     limits: 单帖可读不代表完整回复流
     not_supported: [完整评论树]
-    next_action: 在 Deep-Reach 专用 Chrome profile 登录 x.com 后重试
+    next_action: 用 bsk UI 回退（主浏览器 profile，高风险）；运行 deep-reach bsk
     key: null
     requires_key: false
     actions:
@@ -345,7 +346,7 @@ channels:
     description: Reddit 搜索和评论
     limits: 不保证完整评论树
     not_supported: [完整评论树]
-    next_action: 在 Deep-Reach 专用 Chrome profile 登录 reddit.com 后重试
+    next_action: 用 bsk UI 回退（主浏览器 profile，高风险）；运行 deep-reach bsk
     key: null
     requires_key: false
     actions:
@@ -371,7 +372,7 @@ channels:
     description: 小红书搜索、笔记、评论
     limits: 不保证全部评论；不声称理解图片/视频
     not_supported: [完整评论树, 图片/视频理解]
-    next_action: 在 Deep-Reach 专用 Chrome profile 登录 xiaohongshu.com 后重试
+    next_action: 用 bsk UI 回退（主浏览器 profile，高风险）；运行 deep-reach bsk
     key: null
     requires_key: false
     actions:
@@ -404,7 +405,7 @@ channels:
     description: 知乎搜索和问题
     limits: 不保证完整回答/评论
     not_supported: [完整评论树]
-    next_action: 在 Deep-Reach 专用 Chrome profile 登录 zhihu.com 后重试
+    next_action: 用 bsk UI 回退（主浏览器 profile，高风险）；运行 deep-reach bsk
     key: null
     requires_key: false
     actions:
@@ -430,7 +431,7 @@ channels:
     description: 抖音搜索、用户视频、视频详情
     limits: 搜索/视频可能需登录；不保证评论
     not_supported: [完整评论树, 图片/视频理解]
-    next_action: 在 Deep-Reach 专用 Chrome profile 登录 douyin.com 后重试
+    next_action: 用 bsk UI 回退（主浏览器 profile，高风险）；运行 deep-reach bsk
     key: null
     requires_key: false
     actions:
@@ -464,7 +465,7 @@ channels:
     description: Product Hunt 新品
     limits: 官方 API 需要 developer token；无 token 时 OpenCLI 只返回最新发布，不是投票榜
     not_supported: [关键词搜索, 历史数据]
-    next_action: 可选填 official.producthunt.token 走官方 API；否则自动走 OpenCLI
+    next_action: 有 token 走官方 API；否则 OpenCLI 公开；失败时用 bsk 回退
     key: official.producthunt.token
     requires_key: false
     actions:

@@ -2,7 +2,7 @@
 
 > 声明能力，不代表所有网络、账号和页面都实测。  
 > `requires`：`none` / `login` / `key`。  
-> `tier`：`p0` 原生免费接口 / `p1` OpenCLI / `p2` 第三方采集。多层按顺序自动降级。
+> `tier`：`p0` 官方接口 / `p1` 公开网页 / `p2` 第三方引擎 / `p3` bsk UI 回退。自动层按顺序降级；`p3` 返回 `NEED_UI`，由 agent 用 `deep-reach bsk` 接手。
 
 ## default
 
@@ -10,17 +10,17 @@
 |---|---|---|---|---|---|
 | `bilibili` | `search` | none | p0+p1 | 视频标题、作者、播放/点赞/收藏/弹幕、URL | 公开搜索可能触发 -412，自动降 P1 |
 | `bilibili` | `read` | none | p0+p1 | 视频信息 | — |
-| `bilibili` | `subtitle` | login | p1 | 字幕 | 需要登录；部分视频无字幕 |
+| `bilibili` | `subtitle` | login | p3 | 字幕（bsk UI 回退） | 需要登录；部分视频无字幕 |
 | `bilibili` | `comments` | none | p0+p1 | 已加载评论 | 不保证全部回复 |
 | `youtube` | `search` | none | p0+p1 | 视频标题、频道、观看数、URL | p0 需要 YouTube Data API key |
 | `youtube` | `read` | none | p0+p1 | 视频信息 | p0 需要 YouTube Data API key |
 | `weibo` | `hot` | none | p1 | 热搜词、热度、分类、URL | — |
-| `weibo` | `search` | login | p1 | 微博搜索结果 | 需要登录；不保证完整评论树 |
+| `weibo` | `search` | login | p3 | 微博搜索结果（bsk UI 回退） | 需要登录；不保证完整评论树 |
 | `weibo` | `read` | none | p1 | 单条微博 | — |
 | `weibo` | `comments` | none | p1 | 已加载评论 | 不保证全部回复 |
 | `xueqiu` | `quote` | none | p0+p1 | A/HK/US 实时价格、涨跌、成交额 | 不提供历史 K 线 |
-| `xueqiu` | `hot` | login | p0+p1 | 热门动态；优先雪球 API | 需要 `xueqiu.cookie` 或 OpenCLI 登录 |
-| `xueqiu` | `hot_stocks` | login | p0 | 雪球热搜股 | 需要 `xueqiu.cookie` |
+| `xueqiu` | `hot` | login | p0+bsk | 热门动态；优先雪球 API | 需要 `xueqiu.cookie`；失败时用 bsk |
+| `xueqiu` | `hot_stocks` | login | p0+bsk | 雪球热搜股 | 需要 `xueqiu.cookie`；失败时用 bsk |
 | `xueqiu` | `search` | none | p0+p1 | 股票搜索结果；腾讯 smartbox 优先 | — |
 | `xueqiu` | `comments` | none | p1 | 股票讨论 | 不保证全部回复 |
 | `amazon` | `search` | none | p1 | 标题、ASIN、价格、评分、评论数、URL | 不保证广告/库存 |
@@ -28,7 +28,7 @@
 | `amazon` | `bestsellers` | none | p1 | 榜单条目 | 不保证所有类目 |
 | `amazon` | `discussion` | none | p1 | 评论摘要/讨论 | 不保证完整评论树 |
 | `web` | `search` | key | p2 | 通用网页搜索结果：标题、URL、摘要 | 需要至少一个 P2 key；结果质量取决于 provider |
-| `web` | `read` | none | p0+p2 | URL → 文本；p0 直连，p2 依次用 Jina/Firecrawl/Tavily/Bright Data | 不能绕过登录墙；无结构化字段 |
+| `web` | `read` | none | p1+p2 | URL → 文本；p1 直连 / Jina，p2 依次用 Firecrawl/Tavily/Bright Data | 不能绕过登录墙；无结构化字段 |
 | `github` | `search` | none | p0 | 仓库名、描述、stars/forks/issues、URL | 无 token 时额度低；不含代码搜索 |
 | `github` | `read` | none | p0 | 仓库信息 | 私有仓库需要 token 权限 |
 | `github` | `issues` | none | p0 | issue 标题、正文、作者、评论/反应数 | 不含 PR；不保证完整评论树 |
@@ -39,22 +39,24 @@
 
 > 雪球 `hot` / `hot_stocks` 的 `xueqiu.cookie` 从已登录浏览器复制，通常几小时过期；过期后重新复制，不需要密码。
 
-## optional（登录）
+## optional（登录 / bsk 回退）
 
 | 渠道 | 动作 | requires | tier | 能拿到 | 不能/不保证 |
 |---|---|---|---|---|---|
-| `x` | `search` | login | p1 | 推文搜索结果 | 单帖可读不代表完整回复流 |
-| `x` | `read` | login | p1 | 推文串 | 不保证完整评论树 |
-| `reddit` | `search` | login | p1 | 帖子搜索结果 | 不保证完整评论树 |
-| `reddit` | `read` | login | p1 | 帖子 + 已加载评论 | 不保证全部回复 |
-| `xiaohongshu` | `search` | login | p1 | 笔记搜索结果 | 不保证全部评论 |
-| `xiaohongshu` | `read` | login | p1 | 笔记正文 | 不声称理解图片/视频 |
-| `xiaohongshu` | `comments` | login | p1 | 已加载评论 | 不保证全部回复 |
-| `zhihu` | `search` | login | p1 | 问题搜索结果 | 不保证完整回答/评论 |
-| `zhihu` | `read` | login | p1 | 问题与回答 | 不保证完整评论树 |
-| `douyin` | `search` | login | p1 | 视频搜索结果 | 不保证评论 |
-| `douyin` | `videos` | login | p1 | 用户视频列表 | 不保证评论 |
-| `douyin` | `detail` | login | p1 | 视频详情 | 不声称理解视频内容 |
+| `x` | `search` | login | p3 | 推文搜索结果（bsk UI 回退） | 单帖可读不代表完整回复流 |
+| `x` | `read` | login | p3 | 推文串（bsk UI 回退） | 不保证完整评论树 |
+| `reddit` | `search` | login | p3 | 帖子搜索结果（bsk UI 回退） | 不保证完整评论树 |
+| `reddit` | `read` | login | p3 | 帖子 + 已加载评论（bsk UI 回退） | 不保证全部回复 |
+| `xiaohongshu` | `search` | login | p3 | 笔记搜索结果（bsk UI 回退） | 不保证全部评论 |
+| `xiaohongshu` | `read` | login | p3 | 笔记正文（bsk UI 回退） | 不声称理解图片/视频 |
+| `xiaohongshu` | `comments` | login | p3 | 已加载评论（bsk UI 回退） | 不保证全部回复 |
+| `zhihu` | `search` | login | p3 | 问题搜索结果（bsk UI 回退） | 不保证完整回答/评论 |
+| `zhihu` | `read` | login | p3 | 问题与回答（bsk UI 回退） | 不保证完整评论树 |
+| `douyin` | `search` | login | p3 | 视频搜索结果（bsk UI 回退） | 不保证评论 |
+| `douyin` | `videos` | login | p3 | 用户视频列表（bsk UI 回退） | 不保证评论 |
+| `douyin` | `detail` | login | p3 | 视频详情（bsk UI 回退） | 不声称理解视频内容 |
+
+> 登录动作没有自动后端时返回 `NEED_UI`；用 `deep-reach bsk` 回退，不要走 OpenCLI 的登录态适配路径。
 
 ## optional（免费 key）
 
@@ -74,9 +76,9 @@
 | 渠道 | 动作 | requires | tier | 说明 |
 |---|---|---|---|---|
 | `producthunt` | `hot` | none | p0+p1 | 有 token 走官方投票榜；无 token 走 OpenCLI 最新发布 |
-| `kickstarter` | `read` | none | p0+p2 | 仅给定 URL；没有搜索 |
-| `cnipa` | `read` | none | p0+p2 | 仅给定 URL；官方检索需登录+验证码 |
-| `copyright` | `read` | none | p0+p2 | 仅给定 URL；无统一全球版权 API |
+| `kickstarter` | `read` | none | p1+p2 | 仅给定 URL；没有搜索 |
+| `cnipa` | `read` | none | p1+p2 | 仅给定 URL；官方检索需登录+验证码 |
+| `copyright` | `read` | none | p1+p2 | 仅给定 URL；无统一全球版权 API |
 
 ## 分层语义
 

@@ -30,11 +30,31 @@ class BskGuardTest(unittest.TestCase):
     def test_debug_replay_is_blocked(self):
         self._assert_blocked(["debug", "replay", "--session", "s1"])
 
+    def test_debug_replay_after_options_is_blocked(self):
+        self._assert_blocked(["debug", "--json", "replay", "--session", "s1"])
+
+    def test_debug_replay_after_double_dash_is_blocked(self):
+        self._assert_blocked(["--session", "s1", "debug", "--", "replay", "id"])
+
+    def test_debug_replay_file_is_blocked(self):
+        self._assert_blocked(["debug", "--replay-file", "request.json", "replay", "id"])
+
     def test_evaluate_fetch_is_blocked(self):
         self._assert_blocked(["evaluate", "fetch('/api/x')"])
 
     def test_evaluate_xhr_is_blocked(self):
         self._assert_blocked(["evaluate", "new XMLHttpRequest()"])
+
+    def test_evaluate_other_network_primitives_are_blocked(self):
+        for expression in (
+            "navigator.sendBeacon('/api', 'x')",
+            "new WebSocket('wss://example')",
+            "new EventSource('/api')",
+            "axios('/api')",
+            "$.ajax('/api')",
+        ):
+            with self.subTest(expression=expression):
+                self._assert_blocked(["evaluate", expression])
 
     def test_evaluate_dom_read_is_allowed(self):
         code, _, _, run = self._run(["evaluate", "document.title"])
@@ -86,11 +106,22 @@ class BskGuardTest(unittest.TestCase):
         payload = json.loads(out.getvalue())
         self.assertEqual(payload["error"]["code"], NEED_SETUP)
 
+    def test_unspawnable_bsk_returns_need_setup(self):
+        out = io.StringIO()
+        with mock.patch(
+            "deep_reach.backends.bsk_guard.subprocess.run",
+            side_effect=PermissionError("denied"),
+        ), redirect_stdout(out):
+            code = bsk_guard.run_bsk(["status"], bin_path="/tmp")
+        self.assertEqual(code, 1)
+        payload = json.loads(out.getvalue())
+        self.assertEqual(payload["error"]["code"], NEED_SETUP)
+
     def test_guard_can_be_disabled_for_debugging(self):
         code, _, stderr, run = self._run(["debug", "replay"], guard=False)
         self.assertEqual(code, 0)
         run.assert_called_once_with(["bsk", "debug", "replay"])
-        self.assertIn("main browser profile", stderr)
+        self.assertIn("current browser profile", stderr)
 
 
 if __name__ == "__main__":

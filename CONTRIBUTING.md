@@ -21,7 +21,8 @@ uv run python scripts/smoke.py   # live, optional
 
 ## Design rules
 
-- Deep-Reach is read-only: never add post/comment/like/DM actions.
-- Backends are ordered P0 → P1 → P2 by the registry; do not bypass the order.
+- Deep-Reach is read-write: write actions must be explicit in the action definition and must require user confirmation. Never add hidden writes.
+- Backends are ordered P0 → P1 → P2 → P3 by the registry; do not bypass the order.
 - A visible channel must have actions, `requires`, tiers, limits/not_supported and a capability note.
-- P0/P1/P2 failures follow `FINAL_CODES` / `RETRYABLE_CODES`; do not add ad-hoc fallback rules.
+- P0/P1/P2/P3 failures follow `FINAL_CODES` / `RETRYABLE_CODES`; do not add ad-hoc fallback rules.
+- P3 bsk may use all of its capabilities, including writes, but must not call site internal APIs directly; keep the guard's forbidden list in sync.

@@ -61,7 +61,7 @@
 
 ## 非目标
 
-- 不做写操作，不做社媒管理。
+- 不做未经用户确认的写操作，不做社媒管理。
 - 不自建爬虫集群；P2 只调用第三方公开服务。
 - 不接付费 API（X API、Keepa、WIPO 付费、Lens 等）。
 - 不做多用户 / 云服务 / 分布式。
@@ -76,7 +76,7 @@
 | `experimental` | 可能受反爬/页面改版影响 | 明确标注不稳定 |
 | `planned` | 尚未实现，只在 `roadmap` 出现 | 不伪装成可用 |
 
-`level` 描述可用性；`tier` 描述后端路径。两者正交：一个 `default` 渠道可以同时有 P0 和 P1。
+`level` 描述可用性；`tier` 描述后端路径。两者正交：一个 `default` 渠道可以同时有 P0、P1 和 P3 回退。
 
 ## 与 Agent-Reach 的关系
 
@@ -93,19 +93,20 @@ Agent-Reach 是同类产品，Deep-Reach 参考它的 Channel / Action / Backend
 | 官方 API | 刻意不接 | P0 免费层优先 |
 | 产品调研 | 不覆盖 | Amazon / 众筹 / 专利是验证垂直 |
 
-## v0.9 范围
+## v0.11 范围
 
 ### 已实现
 
 - `default`：bilibili、youtube、weibo、xueqiu、amazon、web、github、v2ex。
 - `optional`：x、reddit、xiaohongshu、zhihu、douyin。
 - `experimental`：producthunt、kickstarter、cnipa、copyright。
-- P0 后端：`bilibili-public`、`tencent-quote`、`http-read`、`youtube-api`（需 key）、`github-api`（token 可选）、`v2ex-public`、`ebay-api`、`etsy-api`、`producthunt-api`、`uspto-odp`、`epo-ops`。
-- P1 后端：OpenCLI。
-- P2 后端：`jina`、`tavily-search` / `tavily-extract`、`brave-search`、`firecrawl-search` / `firecrawl-scrape`、`brightdata-serp` / `brightdata-unlocker`。
-- 雪球编排：`tencent-quote` / `tencent-search` → `xueqiu-api` → OpenCLI；`hot_stocks` 走雪球 API。
+- P0 后端：`bilibili-public`、`tencent-quote`、`tencent-search`、`youtube-api`（需 key）、`github-api`（token 可选）、`v2ex-public`、`ebay-api`、`etsy-api`、`producthunt-api`、`uspto-odp`、`epo-ops`。
+- P1 后端：`http-read`、`jina`、OpenCLI 公开命令。
+- P2 后端：`tavily-search` / `tavily-extract`、`brave-search`、`firecrawl-search` / `firecrawl-scrape`、`brightdata-serp` / `brightdata-unlocker`。
+- P3 后端：`deep-reach bsk`（bsk UI 回退，agent 驱动；守卫拦截直接内部 API 调用和 `debug replay`）。
+- 雪球编排：`tencent-quote` / `tencent-search` → `xueqiu-api`；`hot` / `hot_stocks` 失败时走 bsk 回退。
 - R3 可靠性：跨进程并发槽、10 秒搜索间隔、1 小时渠道冷却、60–120 秒后端暂停、动作级 deadline。
-- 环境感知状态：`doctor` / `channels` 的 `status` 反映 key、OpenCLI 连接和可用动作；`declared_status` 保留注册表原值。
+- 环境感知状态：`doctor` / `channels` 的 `status` 反映 key、OpenCLI 连接、bsk profile 和可用动作；`declared_status` 保留注册表原值。
 - URL 边界：`web read` 默认只访问 http/https 公网地址；每次重定向重新校验；`DEEP_REACH_ALLOW_PRIVATE_URLS=1` 可显式放行私有地址。
 
 ### 下一步

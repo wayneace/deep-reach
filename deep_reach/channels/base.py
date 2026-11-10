@@ -1,17 +1,17 @@
 """Channel / Action / Backend definitions.
 
 A Channel is a platform. An Action is a verb on that platform. Backends belong
-to one of three tiers and are tried in tier order:
+to one of three automatic tiers and are tried in tier order:
 
-    P0  platform-native free interface: official API free tier, public JSON
-        endpoint, or a native CLI. Optional key, optional login.
-    P1  OpenCLI browser bridge: reuses the login already present in the
-        connected Chrome profile. Optional login.
-    P2  third-party reader / collection service (Jina, Firecrawl, Bright Data).
-        Optional key.
+    P0  official interface: official API free tier, public JSON endpoint, or
+        an official CLI. Optional key / OAuth.
+    P1  public web: direct HTTP, Jina Reader, and public OpenCLI commands.
+    P2  third-party search / crawl engine (Tavily, Brave, Firecrawl, Bright
+        Data). Optional key / quota.
 
-Inside one tier the authored order is kept. The registry sorts backends by
-tier, so the YAML author cannot accidentally put P2 ahead of P0.
+P3 is not a backend tier: actions with ``ui_fallback`` return ``NEED_UI`` and
+hand off to ``deep-reach bsk``. Inside one tier the authored order is kept;
+the registry sorts p0 -> p1 -> p2.
 """
 
 from __future__ import annotations
