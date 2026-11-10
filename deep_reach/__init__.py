@@ -1,3 +1,3 @@
-"""Deep-Reach: personal product research orchestrator built on OpenCLI."""
+"""Deep-Reach: tiered, read-write internet access layer for AI agents."""
 
-__version__ = "0.10.1"
+__version__ = "0.11.0"

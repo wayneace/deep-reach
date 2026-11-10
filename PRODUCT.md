@@ -1,7 +1,7 @@
 # Deep-Reach 产品定义
 
-> 版本：v0.9.3  
-> 日期：2026-11-09
+> 版本：v0.11.0  
+> 日期：2026-11-10
 
 ## 一句话
 
@@ -124,4 +124,4 @@ Agent-Reach 是同类产品，Deep-Reach 参考它的 Channel / Action / Backend
 - 缺 key / 缺登录时 `doctor` 能说清楚下一步。
 - P3 bsk 守卫拦截直接内部 API 调用；写操作放行但需确认用户意图。
 - 每个可见渠道都有 capability note。
-- 176 个单元测试 + 1 个 live smoke 脚本。
+- 225 个单元测试 + 1 个 live smoke 脚本。
