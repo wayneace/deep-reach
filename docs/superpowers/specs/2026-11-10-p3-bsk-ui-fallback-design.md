@@ -18,7 +18,7 @@
 - 用户决定：P3 不写站点 recipe，只做回退引导；具体操作交给调用方 agent 用 bsk 随机应变。
 - 用户决定：bsk 可以使用自己的全部能力，不做 UI-only 限制；唯一硬约束是**不直接 fetch 站点内部接口**。
 - 用户决定：Deep-Reach 不再设只读产品边界，允许写操作。
-- 用户决定：bsk 默认使用主浏览器 profile；高风险渠道默认开启但警告。
+- 用户决定：bsk 默认使用当前已连接的浏览器 profile；高风险渠道默认开启但警告。
 - 用户决定：增加一个薄守卫（方案 B），只拦截直接内部 API 调用，不限制 bsk 其他能力。
 
 ## 2. 目标与非目标
@@ -33,7 +33,7 @@
    - `evaluate` 里的直接网络调用（fetch/XHR/sendBeacon/WebSocket/EventSource 等）
 5. 新增 `deep-reach bsk ...` 薄守卫命令，透传 bsk 命令并在调用前做策略检查。
 6. 移除全局只读产品边界；`WRITE_BLOCKED` 不再是默认行为。
-7. 主浏览器 profile、写操作、高风险渠道都给出明确警告，但不阻塞。
+7. 当前浏览器 profile、写操作、高风险渠道都给出明确警告，但不阻塞。
 8. 更新 `tiers` / `channels` / `doctor` / envelope，使 P3、risk、ui_fallback 可见。
 
 ### 非目标
@@ -131,7 +131,7 @@ TIERS = ("p0", "p1", "p2", "p3")
   "meta": {
     "attempts": [],
     "fallback": "bsk-ui",
-    "profile": "main",
+    "profile": "current",
     "risk": "high",
     "policy": {
       "bsk": "all capabilities, including writes",
@@ -178,7 +178,7 @@ deep-reach bsk <bsk-args...>
 
 - 透传 bsk 的所有命令和参数，返回 bsk 的 stdout/stderr/exit code。
 - 在调用前做策略检查。
-- 在 stderr 打印主浏览器 profile 和写操作警告。
+- 在 stderr 打印当前浏览器 profile 和写操作警告。
 - 不做站点 recipe，不解析 bsk 结果，不自动重试。
 
 ### 硬拦截
@@ -281,13 +281,12 @@ PLATFORM_BLOCKED > POLICY_BLOCKED > NEED_LOGIN > NEED_UI > RATE_LIMITED > ...
 
 ```yaml
 browser:
-  bsk_profile: main        # main | dedicated
   bsk_guard: true          # false 仅用于调试，不推荐
 risk:
   allow_high: true         # 默认开启；每次调用仍警告
 ```
 
-- `bsk_profile` 默认 `main`，按用户选择。
+- bsk 使用当前已连接的浏览器 profile；需要指定实例时直接传 `--browser <id|label>` 给 `bsk session start`。
 - `bsk_guard` 默认 `true`。
 - `allow_high` 默认 `true`；若为 false，高风险动作返回 `PLATFORM_BLOCKED` 或 `BAD_INPUT` 提示（未来可选）。
 
@@ -314,7 +313,7 @@ risk:
 
 - `tiers` 输出 P0/P1/P2/P3，P3 标注为 fallback。
 - `channels` 输出 `ui_fallback` 和 `risk`。
-- `doctor` 显示 `profile: main` 和高风险 warning。
+- `doctor` 显示 `profile: current` 和高风险 warning。
 - 文档不再出现“只读”承诺。
 
 ### 手动 smoke
@@ -330,7 +329,7 @@ risk:
 
 | 风险 | 缓解 |
 |---|---|
-| 主浏览器 profile 被误操作/封号 | 每次 P3 警告；文档建议小号；保留 dedicated profile 配置 |
+| 当前浏览器 profile 被误操作/封号 | 每次 P3 警告；文档建议小号；需要时用 `bsk --browser` 选择实例 |
 | 写操作不可逆 | 允许写，但 stderr/meta 警告；未来可加 `--confirm-write` |
 | bsk 守卫被绕过（字符串拼接、动态 eval） | 说明这是“薄守卫”，不是安全沙箱；高风险场景仍建议人工监督 |
 | P3 非确定性 | 明确 P3 只做 handoff，不承诺 `items`；agent 自行验证结果 |

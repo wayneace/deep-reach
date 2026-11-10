@@ -1,5 +1,4 @@
 import io
-import os
 import unittest
 from contextlib import redirect_stderr
 from unittest import mock
@@ -230,8 +229,8 @@ class DispatchTest(unittest.TestCase):
     def test_need_ui_hint_mentions_bsk_install_when_missing(self):
         channel = self._login_channel([])
         with mock.patch(
-            "deep_reach.runtime.dispatch.shutil.which", return_value=None
-        ), mock.patch.dict(os.environ, {"DEEP_REACH_BSK_BIN": ""}):
+            "deep_reach.runtime.dispatch.bsk_available", return_value=False
+        ):
             env = run_action(channel, "search", {"query": "x"}, keys=Keys({}))
         self.assertEqual(env["error"]["code"], NEED_UI)
         self.assertIn("bsk 未安装", env["error"]["hint"])
@@ -340,6 +339,24 @@ class DispatchTest(unittest.TestCase):
             )
         self.assertTrue(env["ok"])
         self.assertIn("high risk", stderr.getvalue().lower())
+
+    def test_need_ui_defaults_to_high_for_undeclared_login_fallback(self):
+        channel = Channel(
+            name="test",
+            category="test",
+            actions=(
+                Action(
+                    name="search",
+                    params=(Param("query"),),
+                    backends=(BackendSpec("public", "search"),),
+                    requires="login",
+                    ui_fallback=True,
+                ),
+            ),
+        )
+        env = run_action(channel, "search", {"query": "x"}, keys=Keys({}))
+        self.assertEqual(env["error"]["code"], NEED_UI)
+        self.assertEqual(env["meta"]["risk"], "high")
 
     def test_need_ui_meta_uses_backend_risk(self):
         def broken(**kw):

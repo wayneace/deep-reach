@@ -3,7 +3,10 @@ import io
 import json
 import unittest
 from contextlib import redirect_stdout
+from unittest import mock
 
+from deep_reach.channels.base import Action, BackendSpec, Channel
+from deep_reach.channels.registry import Registry
 from deep_reach.cli import cmd_capabilities
 
 
@@ -32,6 +35,47 @@ class CapabilitiesOutputTest(unittest.TestCase):
         text = buffer.getvalue()
         self.assertIn("tiers=bsk", text)
         self.assertIn("risk=high", text)
+
+    def test_backend_only_risk_is_shown_in_text_and_json(self):
+        channel = Channel(
+            name="demo",
+            category="test",
+            status="ready",
+            description="demo",
+            actions=(
+                Action(
+                    "search",
+                    backends=(BackendSpec("demo-api", "search", risk="high"),),
+                ),
+            ),
+        )
+        registry = Registry(channels={"demo": channel}, planned={})
+        with mock.patch("deep_reach.cli.load_registry", return_value=registry):
+            json_buffer = io.StringIO()
+            with redirect_stdout(json_buffer):
+                self.assertEqual(
+                    cmd_capabilities(
+                        argparse.Namespace(channel="demo", all=False, json=True)
+                    ),
+                    0,
+                )
+            text_buffer = io.StringIO()
+            with redirect_stdout(text_buffer):
+                self.assertEqual(
+                    cmd_capabilities(
+                        argparse.Namespace(channel="demo", all=False, json=False)
+                    ),
+                    0,
+                )
+
+        payload = json.loads(json_buffer.getvalue())
+        self.assertEqual(payload["channels"][0]["actions"][0]["risk"], "high")
+        action_line = next(
+            line
+            for line in text_buffer.getvalue().splitlines()
+            if line.strip().startswith("search")
+        )
+        self.assertIn("risk=high", action_line)
 
 
 if __name__ == "__main__":

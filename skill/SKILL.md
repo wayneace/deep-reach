@@ -37,6 +37,7 @@ uv run deep-reach state
 - `doctor` 告诉你哪些渠道可用、缺什么、下一步做什么。
 - `tiers` 显示分层定义和每个渠道的层级覆盖。
 - `channels` 默认显示已实现渠道，`status` 是当前环境实测值；`roadmap` 显示未实现的。
+- `fallback` 表示只有手动 bsk UI 路径：`runnable=true`，但 `available_actions` 为空；用 `deep-reach bsk ...` 完成。
 - `capabilities` 是能力契约：能拿什么、不能拿什么、走哪一层。
 - `state` 显示限流冷却、暂停的后端和搜索间隔；`--clear` 清空记忆。
 

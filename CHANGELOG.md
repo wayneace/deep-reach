@@ -9,7 +9,7 @@ P3 收尾：状态准确性与风险门修正。
 - 移除未生效的 `browser.bsk_profile`。bsk 始终使用当前已连接的浏览器 profile；需要指定实例时直接传 `--browser <id|label>` 给 `bsk session start`。
 - `risk.allow_high` 与高风险警告改为使用 action + backend 的最高风险；`NEED_UI` 的 `meta.risk` 同步。
 - `channels` / `doctor` / `capabilities` 的 action risk 显示 backend 声明的风险。
-- 测试数更新为 250。
+- 测试数更新为 253。
 
 ## v0.11.0 — 2026-11-10
 

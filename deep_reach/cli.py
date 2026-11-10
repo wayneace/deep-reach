@@ -343,7 +343,7 @@ def cmd_capabilities(args: argparse.Namespace) -> int:
                 tiers = tiers or "-"
             print(
                 f"  {action.name:<12} requires={action.requires:<6} "
-                f"tiers={tiers:<7} risk={(action.risk or 'low'):<6} "
+                f"tiers={tiers:<7} risk={action_risk(action):<6} "
                 f"{action.description}"
             )
         if channel.limits:

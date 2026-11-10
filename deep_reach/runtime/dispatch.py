@@ -12,13 +12,12 @@ Reliability follows Agent-Reach's model:
 
 from __future__ import annotations
 
-import os
-import shutil
 import sys
 import threading
 import time
 from typing import Callable, Optional
 
+from ..backends.bsk_guard import BSK_INSTALL_HINT, bsk_available
 from ..channels.base import Action, Channel
 from . import health
 from .availability import action_risk
@@ -170,7 +169,9 @@ def _need_ui(
 ) -> dict:
     """Return the bsk UI handoff instead of pretending P3 is an automatic backend."""
     risk = action_risk(action)
-    if not action.risk and not any(backend.risk for backend in action.backends):
+    if not action.risk and not any(
+        backend.risk in {"medium", "high"} for backend in action.backends
+    ):
         risk = "high" if action.requires == "login" else "medium"
     hint = (
         "使用 `deep-reach bsk ...`（守卫版）回退："
@@ -178,11 +179,8 @@ def _need_ui(
         "`click` → `session stop`。bsk 全能力可用（含写操作）；"
         "不要直接 fetch 站点内部接口；写操作有副作用，请确认用户意图。"
     )
-    if not (os.environ.get("DEEP_REACH_BSK_BIN") or shutil.which("bsk")):
-        hint += (
-            " bsk 未安装；安装："
-            "https://raw.githubusercontent.com/Tencent/BrowserSkill/main/AGENT_INSTALL.md"
-        )
+    if not bsk_available():
+        hint += f" bsk 未安装；安装：{BSK_INSTALL_HINT}"
     return envelope(
         channel=channel.name,
         action=action.name,
@@ -262,7 +260,7 @@ def run_action(
     if effective_risk == "high":
         print(
             f"warning: {channel.name}/{action_name} is high risk; "
-            "using the real browser profile may trigger platform risk controls.",
+            "confirm intent; automation may trigger platform risk controls.",
             file=sys.stderr,
         )
 

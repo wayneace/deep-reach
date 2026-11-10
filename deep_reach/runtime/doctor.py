@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Optional
 
+from ..backends.bsk_guard import BSK_INSTALL_HINT
 from ..backends.opencli import RECOMMENDED_VERSION, OpenCLIClient, version_status
 from ..channels.base import TIERS
 from ..channels.registry import Registry
@@ -20,9 +21,6 @@ from .keys import Keys, template_path
 from .result import NEED_SETUP, ReachError
 
 LEVEL_ORDER = ("default", "optional", "experimental")
-BSK_INSTALL_HINT = (
-    "https://raw.githubusercontent.com/Tencent/BrowserSkill/main/AGENT_INSTALL.md"
-)
 
 
 def _as_bool(value, default: bool = True) -> bool:

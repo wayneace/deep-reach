@@ -1,8 +1,9 @@
 """Environment-aware channel availability.
 
 The registry declares intent (level/status). This module answers the narrower
-question a user asks before running a command: is there at least one backend
-that can run in *this* environment right now?
+question a user asks before running a command: is there at least one path that
+can run in *this* environment right now? That includes an automatic backend, or
+for a bsk-only channel, the manual bsk handoff when bsk is installed.
 
 `doctor` probes the OpenCLI connection for an exact answer. `channels` only
 checks whether OpenCLI is installed, so it stays fast; when the binary exists
@@ -52,7 +53,7 @@ class Environment:
 class ChannelAvailability:
     status: str
     declared_status: str
-    runnable: bool
+    runnable: bool  # includes the manual bsk path for bsk-only channels
     available_actions: tuple[str, ...]
     unavailable_actions: dict[str, list[str]]
     ui_fallback_actions: tuple[str, ...] = ()
@@ -155,6 +156,7 @@ def channel_availability(channel: Channel, env: Environment) -> ChannelAvailabil
     if declared == "planned":
         status = "planned"
     elif bsk_only:
+        # Manual bsk fallback dominates the remaining declared statuses.
         status = "fallback" if env.bsk_installed else "needs_setup"
     elif declared == "needs_key":
         status = "ready" if all_ok else "needs_key"

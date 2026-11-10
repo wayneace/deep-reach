@@ -127,6 +127,12 @@ class AvailabilityTest(unittest.TestCase):
         self.assertEqual(result.status, "needs_setup")
         self.assertFalse(result.runnable)
 
+    def test_bsk_only_planned_channel_stays_planned(self):
+        ch = bsk_only_channel()
+        ch.status = "planned"
+        result = channel_availability(ch, env(installed=False, bsk=True))
+        self.assertEqual(result.status, "planned")
+
     def test_next_action_for_fallback_mentions_bsk(self):
         ch = bsk_only_channel()
         environment = env(installed=False, bsk=True)
@@ -136,7 +142,7 @@ class AvailabilityTest(unittest.TestCase):
         self.assertIn("当前浏览器 profile", hint)
         self.assertNotIn("OpenCLI", hint)
 
-    def test_next_action_for_fallback_mentions_bsk_install_when_missing(self):
+    def test_next_action_for_needs_setup_mentions_bsk_install_when_missing(self):
         ch = bsk_only_channel()
         environment = env(installed=False, bsk=False)
         result = channel_availability(ch, environment)

@@ -13,7 +13,7 @@
 - P3 不写站点 recipe；只返回 `NEED_UI` 引导。
 - bsk 全能力可用，包括写操作；守卫只拦直接内部 API 调用和 `debug replay`。
 - Deep-Reach 不再声明只读；移除 OpenCLI 全局写拦截。
-- bsk 默认 main profile；高风险渠道默认开启但警告。
+- bsk 默认使用当前已连接的浏览器 profile；高风险渠道默认开启但警告。
 - 不新增 MCP；不加站点 recipe。
 
 ---
@@ -157,7 +157,7 @@ uv run pytest -q tests/test_envelope.py tests/test_dispatch.py tests/test_availa
 - 实现 argv 解析与策略检查。
 - `POLICY_BLOCKED` 加入 result.py。
 - CLI 用 `argparse.REMAINDER` 注册 `bsk` 子命令。
-- stderr 警告：main profile、写操作副作用。
+- stderr 警告：当前浏览器 profile、写操作副作用。
 - 不做站点 recipe，不解析 bsk 结果。
 
 **验证**
@@ -227,14 +227,13 @@ rg -n "只读|read-only|不发帖|不评论|100% 被" README.md PRODUCT.md skill
 
 1. `tiers` 输出 P0/P1/P2/P3；P3 标注“fallback / manual”。
 2. `channels` 每行显示 risk；登录动作显示 `ui_fallback`。
-3. `doctor` 显示 `profile: main` 和 warning。
+3. `doctor` 显示 `profile: current` 和 warning。
 4. `bsk` 未安装/未连接时，`NEED_UI` hint 仍可用，并提示安装。
 
 **GREEN**
 
 - 扩展输出结构。
 - 增加配置读取：
-  - `browser.bsk_profile` 默认 `main`
   - `browser.bsk_guard` 默认 `true`
   - `risk.allow_high` 默认 `true`
 - 更新 `keys.example.yaml` 注释。
