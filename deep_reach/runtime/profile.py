@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Optional
 
 from ..backends.opencli import OpenCLIClient
+from .child_env import child_env
 from .keys import Keys, default_keys_path
 
 
@@ -105,6 +106,7 @@ def launch() -> dict:
             ],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
+            env=child_env(),
         )
     except OSError as exc:
         return {"ok": False, "error": str(exc), "chrome": chrome, "profile_dir": str(path)}

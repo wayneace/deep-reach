@@ -16,6 +16,7 @@ from typing import Optional
 
 from ..channels.base import BackendSpec, Channel
 from ..runtime.availability import OPENCLI_INSTALL_COMMAND, OPENCLI_PACKAGE
+from ..runtime.child_env import child_env
 from ..runtime.dispatch import BACKENDS
 from ..runtime.result import (
     BAD_INPUT,
@@ -140,6 +141,7 @@ class OpenCLIClient:
             subprocess.run(
                 ["taskkill", "/F", "/T", "/PID", str(proc.pid)],
                 capture_output=True,
+                env=child_env(),
             )
         else:
             try:
@@ -148,7 +150,7 @@ class OpenCLIClient:
                 pass
 
     def _run(self, argv: list[str], timeout: float, with_profile: bool = True):
-        env = os.environ.copy()
+        env = child_env()
         if with_profile:
             profile = self._effective_profile()
             if profile:

@@ -59,27 +59,27 @@ class BskGuardTest(unittest.TestCase):
     def test_evaluate_dom_read_is_allowed(self):
         code, _, _, run = self._run(["evaluate", "document.title"])
         self.assertEqual(code, 0)
-        run.assert_called_once_with(["bsk", "evaluate", "document.title"])
+        run.assert_called_once_with(["bsk", "evaluate", "document.title"], env=mock.ANY)
 
     def test_debug_requests_is_allowed(self):
         code, _, _, run = self._run(["debug", "requests"])
         self.assertEqual(code, 0)
-        run.assert_called_once_with(["bsk", "debug", "requests"])
+        run.assert_called_once_with(["bsk", "debug", "requests"], env=mock.ANY)
 
     def test_network_read_is_allowed(self):
         code, _, _, run = self._run(["network"])
         self.assertEqual(code, 0)
-        run.assert_called_once_with(["bsk", "network"])
+        run.assert_called_once_with(["bsk", "network"], env=mock.ANY)
 
     def test_click_is_allowed(self):
         code, _, _, run = self._run(["click", "@e1"])
         self.assertEqual(code, 0)
-        run.assert_called_once_with(["bsk", "click", "@e1"])
+        run.assert_called_once_with(["bsk", "click", "@e1"], env=mock.ANY)
 
     def test_write_is_allowed_with_warning(self):
         code, _, stderr, run = self._run(["post", "hello"])
         self.assertEqual(code, 0)
-        run.assert_called_once_with(["bsk", "post", "hello"])
+        run.assert_called_once_with(["bsk", "post", "hello"], env=mock.ANY)
         self.assertIn("write operation", stderr)
 
     def test_rule_add_warns_but_runs(self):
@@ -93,7 +93,7 @@ class BskGuardTest(unittest.TestCase):
     def test_child_exit_code_is_passed_through(self):
         code, _, _, run = self._run(["status"], returncode=7)
         self.assertEqual(code, 7)
-        run.assert_called_once_with(["bsk", "status"])
+        run.assert_called_once_with(["bsk", "status"], env=mock.ANY)
 
     def test_missing_bsk_returns_need_setup(self):
         out = io.StringIO()
@@ -120,7 +120,7 @@ class BskGuardTest(unittest.TestCase):
     def test_guard_can_be_disabled_for_debugging(self):
         code, _, stderr, run = self._run(["debug", "replay"], guard=False)
         self.assertEqual(code, 0)
-        run.assert_called_once_with(["bsk", "debug", "replay"])
+        run.assert_called_once_with(["bsk", "debug", "replay"], env=mock.ANY)
         self.assertIn("current browser profile", stderr)
 
 

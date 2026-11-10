@@ -15,6 +15,7 @@ import subprocess
 import sys
 from typing import Optional
 
+from ..runtime.child_env import child_env
 from ..runtime.result import (
     BAD_INPUT,
     NEED_SETUP,
@@ -149,7 +150,7 @@ def run_bsk(
         or "bsk"
     )
     try:
-        proc = subprocess.run([binary, *args])
+        proc = subprocess.run([binary, *args], env=child_env())
     except OSError as exc:
         _print_error(
             NEED_SETUP,

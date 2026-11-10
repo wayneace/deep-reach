@@ -51,6 +51,7 @@ from .runtime.availability import (
     detect_environment,
     next_action_for,
 )
+from .runtime.child_env import child_env
 from .runtime.dispatch import run_action
 from .runtime.doctor import build_doctor_report, format_doctor_text
 from .runtime.keys import Keys, template_path
@@ -491,6 +492,7 @@ def cmd_setup(args: argparse.Namespace) -> int:
                 encoding="utf-8",
                 errors="replace",
                 timeout=10,
+                env=child_env(),
             )
             version = (result.stdout or result.stderr).strip() or "unknown"
         except Exception as exc:  # noqa: BLE001
@@ -623,6 +625,7 @@ def _latest_opencli_version() -> Optional[str]:
             encoding="utf-8",
             errors="replace",
             timeout=20,
+            env=child_env(),
         )
     except Exception:  # noqa: BLE001 - optional network check
         return None
