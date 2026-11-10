@@ -132,7 +132,7 @@ Agent 应该 branch `ok` 和 `error.code`，不要解析底层文本。`tier` �
 - **不编造**：结果来自 `items`；搜索摘要不能当全文。
 - **不承诺完整评论树**：`comments` 动作返回的是已加载/可见范围。
 - **不把 `raw` 当公开输出**：默认只使用统一字段；需要调试时再看 `raw`。
-- **不手动挑后端**：不要指定 tier 或 backend，让 dispatch 按 P0 → P1 → P2 处理。
+- **不手动挑后端**：不要指定 tier 或 backend，让 dispatch 按 P0 → P1 → P2 处理；失败时按 `NEED_UI` 走 `deep-reach bsk`。
 - **URL 边界**：`web read` 默认拒绝 localhost、回环和内网地址；不要试图绕过，确有需要时由用户显式设置 `DEEP_REACH_ALLOW_PRIVATE_URLS=1`。
 - **降级不是失败**：`ok=true` 且 `degraded=true` 表示已自动换层，结果仍可用。
 - **平台边界**：`PLATFORM_BLOCKED` 时停止，不要换后端、换账号继续撞。

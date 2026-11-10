@@ -50,6 +50,44 @@ class DoctorTest(unittest.TestCase):
         self.assertIn("needs_login", text)
         self.assertIn("→", text)
 
+    def test_bsk_profile_and_warning_are_reported(self):
+        registry = load_registry()
+        with mock.patch(
+            "deep_reach.runtime.doctor.shutil.which",
+            return_value="/usr/local/bin/bsk",
+        ):
+            report = build_doctor_report(registry, Keys({}), client=FakeClient())
+        self.assertEqual(report["bsk"]["profile"], "main")
+        self.assertTrue(report["bsk"]["guard"])
+        self.assertTrue(report["bsk"]["installed"])
+        self.assertIn("write", report["bsk"]["warning"])
+        rows = {row["name"]: row for row in report["channels"]}
+        self.assertEqual(rows["xiaohongshu"]["risk"], "high")
+        self.assertIn("search", rows["xiaohongshu"]["ui_fallback_actions"])
+        self.assertGreaterEqual(report["summary"]["tiers"]["p3"], 6)
+        text = format_doctor_text(report)
+        self.assertIn("bsk:", text)
+        self.assertIn("profile main", text)
+        self.assertIn("warning:", text)
+        self.assertIn("p3", text)
+
+    def test_bsk_config_overrides_are_reported(self):
+        registry = load_registry()
+        keys = Keys(
+            {
+                "browser": {"bsk_profile": "dedicated", "bsk_guard": False},
+                "risk": {"allow_high": False},
+            }
+        )
+        with mock.patch(
+            "deep_reach.runtime.doctor.shutil.which",
+            return_value="/usr/local/bin/bsk",
+        ):
+            report = build_doctor_report(registry, keys, client=FakeClient())
+        self.assertEqual(report["bsk"]["profile"], "dedicated")
+        self.assertFalse(report["bsk"]["guard"])
+        self.assertFalse(report["bsk"]["allow_high_risk"])
+
 
 class DoctorEnvironmentTest(unittest.TestCase):
     def test_missing_opencli_marks_channels_needs_setup(self):

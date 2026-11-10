@@ -12,6 +12,8 @@ Reliability follows Agent-Reach's model:
 
 from __future__ import annotations
 
+import os
+import shutil
 import threading
 import time
 from typing import Callable, Optional
@@ -31,6 +33,7 @@ from .result import (
     NEED_LOGIN,
     NEED_SETUP,
     NEED_UI,
+    POLICY_BLOCKED,
     RATE_LIMITED,
     SOURCE_DISABLED,
     TIMEOUT,
@@ -166,6 +169,11 @@ def _need_ui(
         "`click` → `session stop`。bsk 全能力可用（含写操作）；"
         "不要直接 fetch 站点内部接口；写操作有副作用，请确认用户意图。"
     )
+    if not (os.environ.get("DEEP_REACH_BSK_BIN") or shutil.which("bsk")):
+        hint += (
+            " bsk 未安装；安装："
+            "https://raw.githubusercontent.com/Tencent/BrowserSkill/main/AGENT_INSTALL.md"
+        )
     return envelope(
         channel=channel.name,
         action=action.name,
@@ -220,6 +228,27 @@ def run_action(
         )
 
     keys = keys or Keys({})
+    allow_high = keys.get("risk.allow_high", True)
+    if isinstance(allow_high, str):
+        allow_high = allow_high.strip().lower() not in {
+            "0",
+            "false",
+            "no",
+            "off",
+            "",
+        }
+    if action.risk == "high" and not allow_high:
+        return envelope(
+            channel=channel.name,
+            action=action_name,
+            elapsed_ms=elapsed(),
+            error=ReachError(
+                POLICY_BLOCKED,
+                "high-risk action disabled by risk.allow_high=false",
+                hint="Set risk.allow_high: true in keys.yaml to enable it.",
+            ),
+        )
+
     if action.requires == "login" and not any(
         spec.supports_login for spec in action.backends
     ):

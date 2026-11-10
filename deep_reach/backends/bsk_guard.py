@@ -57,6 +57,14 @@ DEFAULT_WARNING = (
     "the platform may treat automation as abuse."
 )
 
+BSK_INSTALL_HINT = (
+    "https://raw.githubusercontent.com/Tencent/BrowserSkill/main/AGENT_INSTALL.md"
+)
+
+
+def bsk_available() -> bool:
+    return bool(os.environ.get("DEEP_REACH_BSK_BIN") or shutil.which("bsk"))
+
 
 def policy_violation(args: list[str]) -> Optional[str]:
     """Return a human-readable policy violation, or None when the call is allowed."""
@@ -108,7 +116,9 @@ def _print_error(code: str, message: str, hint: Optional[str] = None) -> None:
     print(dump(payload))
 
 
-def run_bsk(args: list[str], *, bin_path: Optional[str] = None) -> int:
+def run_bsk(
+    args: list[str], *, bin_path: Optional[str] = None, guard: bool = True
+) -> int:
     """Run `bsk` with a thin policy check; return the child exit code."""
     if not args:
         _print_error(
@@ -118,7 +128,7 @@ def run_bsk(args: list[str], *, bin_path: Optional[str] = None) -> int:
         )
         return 2
 
-    violation = policy_violation(args)
+    violation = policy_violation(args) if guard else None
     if violation:
         _print_error(
             POLICY_BLOCKED,
@@ -143,8 +153,7 @@ def run_bsk(args: list[str], *, bin_path: Optional[str] = None) -> int:
         _print_error(
             NEED_SETUP,
             "bsk is not installed",
-            "Install BrowserSkill: "
-            "https://raw.githubusercontent.com/Tencent/BrowserSkill/main/AGENT_INSTALL.md",
+            f"Install BrowserSkill: {BSK_INSTALL_HINT}",
         )
         return 1
     return int(proc.returncode)

@@ -16,7 +16,7 @@ class CliBskTest(unittest.TestCase):
     def test_main_dispatches_to_guard(self):
         with mock.patch("deep_reach.cli.run_bsk", return_value=0) as run:
             self.assertEqual(main(["bsk", "status"]), 0)
-        run.assert_called_once_with(["status"])
+        run.assert_called_once_with(["status"], guard=True)
 
 
 if __name__ == "__main__":

@@ -28,6 +28,45 @@ class ChannelsJsonTest(unittest.TestCase):
         self.assertIn("npm install -g @jackwener/opencli", row["effective_next_action"])
         self.assertIn("next_action", row)
 
+    def test_json_shows_risk_and_ui_fallback(self):
+        with mock.patch("deep_reach.cli._load_keys", return_value=Keys({})), mock.patch(
+            "deep_reach.runtime.availability.shutil.which", return_value=None
+        ), mock.patch.dict("os.environ", {"DEEP_REACH_OPENCLI_BIN": ""}):
+            buffer = io.StringIO()
+            with redirect_stdout(buffer):
+                code = cmd_channels(argparse.Namespace(all=False, json=True))
+
+        self.assertEqual(code, 0)
+        payload = json.loads(buffer.getvalue())
+        row = next(
+            item for item in payload["channels"] if item["name"] == "xiaohongshu"
+        )
+        self.assertEqual(row["risk"], "high")
+        self.assertEqual(
+            set(row["ui_fallback_actions"]), {"search", "read", "comments"}
+        )
+        action = next(item for item in row["actions"] if item["name"] == "search")
+        self.assertTrue(action["ui_fallback"])
+        self.assertEqual(action["risk"], "high")
+        self.assertIn("deep-reach bsk", row["effective_next_action"])
+
+    def test_text_shows_risk_and_bsk_suffix(self):
+        with mock.patch("deep_reach.cli._load_keys", return_value=Keys({})), mock.patch(
+            "deep_reach.runtime.availability.shutil.which", return_value=None
+        ), mock.patch.dict("os.environ", {"DEEP_REACH_OPENCLI_BIN": ""}):
+            buffer = io.StringIO()
+            with redirect_stdout(buffer):
+                code = cmd_channels(argparse.Namespace(all=False, json=False))
+
+        self.assertEqual(code, 0)
+        line = next(
+            line
+            for line in buffer.getvalue().splitlines()
+            if line.strip().startswith("xiaohongshu")
+        )
+        self.assertIn("risk=high", line)
+        self.assertIn("search(bsk)", line)
+
 
 class SetupTextTest(unittest.TestCase):
     def test_setup_prompts_opencli_install_when_missing(self):

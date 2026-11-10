@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import shutil
 from typing import Optional
 
 from ..backends.opencli import RECOMMENDED_VERSION, OpenCLIClient, version_status
@@ -11,6 +13,7 @@ from . import health, quota
 from .availability import (
     OPENCLI_INSTALL_COMMAND,
     channel_availability,
+    channel_risk,
     environment_from_profile,
     next_action_for,
 )
@@ -18,6 +21,21 @@ from .keys import Keys, template_path
 from .result import NEED_SETUP, ReachError
 
 LEVEL_ORDER = ("default", "optional", "experimental")
+BSK_INSTALL_HINT = (
+    "https://raw.githubusercontent.com/Tencent/BrowserSkill/main/AGENT_INSTALL.md"
+)
+
+
+def _bsk_installed() -> bool:
+    return bool(os.environ.get("DEEP_REACH_BSK_BIN") or shutil.which("bsk"))
+
+
+def _as_bool(value, default: bool = True) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, str):
+        return value.strip().lower() not in {"0", "false", "no", "off", ""}
+    return bool(value)
 
 
 def build_doctor_report(
@@ -45,6 +63,9 @@ def build_doctor_report(
 
     profile = client.profile_status()
     env = environment_from_profile(keys, profile)
+    bsk_profile = str(keys.get("browser.bsk_profile") or "main")
+    bsk_guard = _as_bool(keys.get("browser.bsk_guard"), True)
+    allow_high = _as_bool(keys.get("risk.allow_high"), True)
     rows = []
     for channel in registry.visible.values():
         availability = channel_availability(channel, env)
@@ -62,12 +83,16 @@ def build_doctor_report(
                 "description": channel.description,
                 "key": channel.key_path,
                 "key_status": keys.status(channel.key_path) if channel.key_path else "n/a",
+                "risk": channel_risk(channel),
                 "tiers": list(channel.tiers),
+                "ui_fallback_actions": list(availability.ui_fallback_actions),
                 "actions": [a.name for a in channel.actions],
                 "requires": {
                     a.name: {
                         "requires": a.requires,
                         "tiers": list(a.tiers),
+                        "risk": a.risk or "low",
+                        "ui_fallback": a.ui_fallback,
                     }
                     for a in channel.actions
                 },
@@ -81,6 +106,12 @@ def build_doctor_report(
         {"name": c.name, "description": c.description, "next_action": c.next_action}
         for c in registry.planned.values()
     ]
+    tier_counts = {
+        tier: sum(1 for row in rows if tier in row["tiers"])
+        for tier in TIERS
+        if tier != "p3"
+    }
+    tier_counts["p3"] = sum(1 for row in rows if row["ui_fallback_actions"])
     summary = {
         "visible": len(rows),
         "ready": sum(1 for r in rows if r["status"] == "ready"),
@@ -91,9 +122,7 @@ def build_doctor_report(
         "experimental": sum(1 for r in rows if r["status"] == "experimental"),
         "planned": len(planned),
         "runnable": sum(1 for r in rows if r["runnable"]),
-        "tiers": {
-            tier: sum(1 for row in rows if tier in row["tiers"]) for tier in TIERS
-        },
+        "tiers": tier_counts,
     }
     template = template_path()
     keys_exists = bool(keys.path and keys.path.exists())
@@ -108,6 +137,17 @@ def build_doctor_report(
         ),
         "opencli": opencli_version,
         "profile": profile,
+        "bsk": {
+            "installed": _bsk_installed(),
+            "profile": bsk_profile,
+            "guard": bsk_guard,
+            "allow_high_risk": allow_high,
+            "install": BSK_INSTALL_HINT,
+            "warning": (
+                "P3 bsk uses the real browser profile; writes are allowed; "
+                "confirm user intent before destructive actions."
+            ),
+        },
         "state": health.report(),
         "quota": quota.report(),
         "channels": rows,
@@ -155,6 +195,16 @@ def format_doctor_text(report: dict) -> str:
             else profile.get("error", "install the Browser Bridge extension")
         )
         lines.append(f"browser:  not connected ({detail})")
+    bsk = report.get("bsk") or {}
+    bsk_state = "installed" if bsk.get("installed") else "not installed"
+    lines.append(
+        f"bsk:      profile {bsk.get('profile', 'main')}; "
+        f"guard {'on' if bsk.get('guard', True) else 'off'}; {bsk_state}"
+    )
+    if not bsk.get("installed"):
+        lines.append(f"          → install: {bsk.get('install')}")
+    if bsk.get("warning"):
+        lines.append(f"          warning: {bsk['warning']}")
     lines.append("")
 
     by_level: dict[str, list] = {level: [] for level in LEVEL_ORDER}
@@ -167,10 +217,18 @@ def format_doctor_text(report: dict) -> str:
             continue
         lines.append(level.upper())
         for row in rows:
-            actions = ", ".join(row["actions"]) or "-"
+            ui_fallback = set(row.get("ui_fallback_actions") or ())
+            actions = (
+                ", ".join(
+                    f"{name}(bsk)" if name in ui_fallback else name
+                    for name in row["actions"]
+                )
+                or "-"
+            )
             tiers = ",".join(row.get("tiers") or [])
             lines.append(
-                f"  {row['name']:<14} {row['status']:<13} {tiers:<7} {actions}"
+                f"  {row['name']:<14} {row['status']:<13} {tiers:<7} "
+                f"risk={row.get('risk', 'low'):<6} {actions}"
             )
             if row["status"] not in {"ready", "experimental"} or row.get("next_action") not in {"-", ""}:
                 lines.append(f"      → {row['next_action']}")
@@ -195,7 +253,8 @@ def format_doctor_text(report: dict) -> str:
     )
     lines.append(
         f"tiers:    p0 {tiers.get('p0', 0)} / p1 {tiers.get('p1', 0)} / "
-        f"p2 {tiers.get('p2', 0)} channels"
+        f"p2 {tiers.get('p2', 0)} channels / "
+        f"p3 {tiers.get('p3', 0)} fallback channels"
     )
     saved = report.get("state") or {}
     cooldowns = saved.get("cooldowns") or []

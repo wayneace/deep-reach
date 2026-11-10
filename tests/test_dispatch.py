@@ -1,4 +1,6 @@
+import os
 import unittest
+from unittest import mock
 
 from deep_reach.channels.base import Action, BackendSpec, Channel, Param
 from deep_reach.runtime.dispatch import BACKENDS, run_action
@@ -7,6 +9,7 @@ from deep_reach.runtime.result import (
     BAD_INPUT,
     NEED_LOGIN,
     NEED_UI,
+    POLICY_BLOCKED,
     UPSTREAM_BROKEN,
     ReachError,
 )
@@ -219,6 +222,24 @@ class DispatchTest(unittest.TestCase):
         self.assertFalse(env["ok"])
         self.assertEqual(env["error"]["code"], NEED_UI)
         self.assertEqual(env["meta"]["attempts"][0]["result"], NEED_LOGIN)
+
+    def test_need_ui_hint_mentions_bsk_install_when_missing(self):
+        channel = self._login_channel([])
+        with mock.patch(
+            "deep_reach.runtime.dispatch.shutil.which", return_value=None
+        ), mock.patch.dict(os.environ, {"DEEP_REACH_BSK_BIN": ""}):
+            env = run_action(channel, "search", {"query": "x"}, keys=Keys({}))
+        self.assertEqual(env["error"]["code"], NEED_UI)
+        self.assertIn("bsk 未安装", env["error"]["hint"])
+        self.assertIn("AGENT_INSTALL.md", env["error"]["hint"])
+
+    def test_high_risk_action_can_be_disabled(self):
+        channel = self._login_channel([])
+        keys = Keys({"risk": {"allow_high": False}})
+        env = run_action(channel, "search", {"query": "x"}, keys=keys)
+        self.assertFalse(env["ok"])
+        self.assertEqual(env["error"]["code"], POLICY_BLOCKED)
+        self.assertIn("risk.allow_high", env["error"]["message"])
 
 
 if __name__ == "__main__":

@@ -208,14 +208,44 @@ uv run deep-reach profile status     # 获取 contextId
 uv run deep-reach profile set <contextId>
 ```
 
+### bsk UI 回退（P3）
+
+P3 用 `bsk`（Tencent BrowserSkill）驱动真实浏览器，不写站点 recipe。默认使用主浏览器 profile；写操作允许，但调用方必须确认用户意图。
+
+```bash
+uv run deep-reach bsk status
+uv run deep-reach bsk session start --json
+uv run deep-reach bsk navigate https://example.com --session <id>
+uv run deep-reach bsk observe --session <id>
+uv run deep-reach bsk click @e1 --session <id>
+uv run deep-reach bsk session stop <id>
+```
+
+守卫只拦截：
+
+- 直接 fetch/XHR 站点内部接口；
+- `debug replay`；
+- `evaluate` 里的网络调用。
+
+其他 bsk 能力（observe / snapshot / click / fill / extract / network 读取 / debug 捕获 / 写操作）都可用。配置：
+
+```yaml
+browser:
+  bsk_profile: "main"   # main | dedicated
+  bsk_guard: true
+risk:
+  allow_high: true      # false 可整体禁用高风险动作
+```
+
 ## 架构
 
 ```text
 deep_reach/
   channels/     # Channel / Action / Backend + tier + curated registry
-  backends/     # P0: public/http/github/v2ex/xueqiu/ebay/etsy/producthunt/uspto/epo
-                # P1: opencli.py
-                # P2: jina.py / tavily.py / brave.py / firecrawl.py / brightdata.py
+  backends/     # P0: public/github/v2ex/xueqiu/ebay/etsy/producthunt/uspto/epo
+                # P1: http.py / jina.py / opencli.py（公开命令）
+                # P2: tavily.py / brave.py / firecrawl.py / brightdata.py
+                # P3: bsk_guard.py（bsk UI 回退守卫）
   runtime/      # dispatch / result / keys / doctor / profile / clock / state / health / limits / quota
   data/
     channels.yaml       # 精选渠道 + backend tier（随 wheel 打包）

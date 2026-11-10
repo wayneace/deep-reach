@@ -53,6 +53,7 @@ class ChannelAvailability:
     runnable: bool
     available_actions: tuple[str, ...]
     unavailable_actions: dict[str, list[str]]
+    ui_fallback_actions: tuple[str, ...] = ()
 
 
 def detect_environment(
@@ -121,12 +122,15 @@ def action_availability(
 def channel_availability(channel: Channel, env: Environment) -> ChannelAvailability:
     available: list[str] = []
     unavailable: dict[str, list[str]] = {}
+    ui_fallback: list[str] = []
     for action in channel.actions:
         ok, reasons = action_availability(action, channel, env)
         if ok:
             available.append(action.name)
         else:
             unavailable[action.name] = reasons
+            if action.ui_fallback:
+                ui_fallback.append(action.name)
 
     all_ok = bool(channel.actions) and not unavailable
     any_ok = bool(available)
@@ -150,6 +154,34 @@ def channel_availability(channel: Channel, env: Environment) -> ChannelAvailabil
         runnable=any_ok,
         available_actions=tuple(available),
         unavailable_actions=unavailable,
+        ui_fallback_actions=tuple(ui_fallback),
+    )
+
+
+RISK_ORDER = {"low": 0, "medium": 1, "high": 2}
+
+
+def channel_risk(channel: Channel) -> str:
+    """The highest declared risk across the channel's actions and backends."""
+    risks = [action.risk for action in channel.actions if action.risk]
+    risks.extend(
+        backend.risk
+        for action in channel.actions
+        for backend in action.backends
+        if backend.risk
+    )
+    if not risks:
+        return "low"
+    return max(risks, key=lambda risk: RISK_ORDER.get(risk, 0))
+
+
+def _bsk_hint(actions: tuple[str, ...], env: Optional[Environment]) -> str:
+    profile = "main"
+    if env is not None:
+        profile = str(env.keys.get("browser.bsk_profile") or "main")
+    return (
+        f"可用 `deep-reach bsk ...` 回退（{', '.join(actions)}；"
+        f"profile: {profile}，高风险；bsk 全能力可用，写操作需确认）"
     )
 
 
@@ -160,7 +192,13 @@ def next_action_for(
 ) -> str:
     """The most actionable next step for the channel's effective status."""
     status = availability.status
+    ui_actions = availability.ui_fallback_actions
+    ui_hint = _bsk_hint(ui_actions, env) if ui_actions else ""
+
     if status == "needs_setup":
+        has_auto = any(action.backends for action in channel.actions)
+        if ui_actions and not has_auto:
+            return ui_hint
         if env is not None and not env.opencli_installed:
             base = (
                 f"安装 OpenCLI（`{OPENCLI_INSTALL_COMMAND}`），"
@@ -171,7 +209,10 @@ def next_action_for(
                 "安装/启用 OpenCLI Browser Bridge 扩展"
                 f"（{BROWSER_BRIDGE_URL}），然后运行 `deep-reach doctor`"
             )
-        return f"{base}；安装后：{channel.next_action}" if channel.next_action else base
+        if channel.next_action:
+            base = f"{base}；安装后：{channel.next_action}"
+        return f"{base}；{ui_hint}" if ui_hint else base
+
     if status == "degraded":
         names = ", ".join(availability.unavailable_actions)
         reasons = " ".join(
@@ -181,11 +222,14 @@ def next_action_for(
         )
         if env is not None and "missing" in reasons:
             path = env.keys.path or default_keys_path()
-            return (
+            base = (
                 f"部分动作当前不可用（{names}）；缺 key 的写入 {path}"
                 f"（模板：{template_path()}）；运行 `deep-reach doctor` 查看原因"
             )
-        return f"部分动作当前不可用（{names}）；运行 `deep-reach doctor` 查看原因"
+        else:
+            base = f"部分动作当前不可用（{names}）；运行 `deep-reach doctor` 查看原因"
+        return f"{base}；{ui_hint}" if ui_hint else base
+
     if status == "needs_key":
         path = (
             env.keys.path
@@ -193,11 +237,18 @@ def next_action_for(
             else default_keys_path()
         )
         detail = channel.next_action or f"填写 {channel.key_path or '对应 key'}"
-        return f"{detail}；写入 {path}（模板：{template_path()}）"
+        base = f"{detail}；写入 {path}（模板：{template_path()}）"
+        return f"{base}；{ui_hint}" if ui_hint else base
+
+    if status == "needs_login":
+        base = (
+            channel.next_action
+            or f"在 Deep-Reach 专用 Chrome profile 登录 {channel.name} 后重试"
+        )
+        return f"{base}；{ui_hint}" if ui_hint else base
+
     if channel.next_action:
         return channel.next_action
-    if status == "needs_login":
-        return f"在 Deep-Reach 专用 Chrome profile 登录 {channel.name} 后重试"
     if status == "experimental":
         return "该渠道可能不稳定；失败时稍后重试"
     return "-"

@@ -13,6 +13,10 @@ class DocsContractTest(unittest.TestCase):
             for phrase in BANNED:
                 self.assertNotIn(phrase, text, f"{name} still contains {phrase!r}")
 
+    def test_changelog_has_v0110(self):
+        text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+        self.assertIn("v0.11.0", text)
+
 
 if __name__ == "__main__":
     unittest.main()

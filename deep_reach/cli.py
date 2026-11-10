@@ -46,6 +46,7 @@ from .runtime.availability import (
     OPENCLI_BIN_ENV,
     OPENCLI_INSTALL_COMMAND,
     channel_availability,
+    channel_risk,
     detect_environment,
     next_action_for,
 )
@@ -70,6 +71,14 @@ def _ensure_utf8() -> None:
 
 def _load_keys() -> Keys:
     return Keys.load()
+
+
+def _as_bool(value, default: bool = True) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, str):
+        return value.strip().lower() not in {"0", "false", "no", "off", ""}
+    return bool(value)
 
 
 def _register_backends(keys: Keys) -> None:
@@ -222,12 +231,16 @@ def cmd_channels(args: argparse.Namespace) -> int:
                     "unavailable_actions": availability.unavailable_actions,
                     "category": channel.category,
                     "description": channel.description,
+                    "risk": channel_risk(channel),
                     "tiers": list(channel.tiers),
+                    "ui_fallback_actions": list(availability.ui_fallback_actions),
                     "actions": [
                         {
                             "name": a.name,
                             "requires": a.requires,
                             "tiers": list(a.tiers),
+                            "risk": a.risk or "low",
+                            "ui_fallback": a.ui_fallback,
                             "description": a.description,
                         }
                         for a in channel.actions
@@ -250,8 +263,17 @@ def cmd_channels(args: argparse.Namespace) -> int:
         print(level.upper())
         for channel in sorted(rows, key=lambda c: c.name):
             availability = channel_availability(channel, env)
-            actions = ", ".join(a.name for a in channel.actions) or "-"
-            print(f"  {channel.name:<14} {availability.status:<13} {actions}")
+            actions = (
+                ", ".join(
+                    f"{a.name}(bsk)" if a.ui_fallback else a.name
+                    for a in channel.actions
+                )
+                or "-"
+            )
+            print(
+                f"  {channel.name:<14} {availability.status:<13} "
+                f"risk={channel_risk(channel):<6} {actions}"
+            )
             hint = next_action_for(channel, availability, env)
             if availability.status not in {"ready", "experimental"} and hint != "-":
                 print(f"      → {hint}")
@@ -352,23 +374,39 @@ def cmd_tiers(args: argparse.Namespace) -> int:
         return 2
 
     channels = registry.visible
+
+    def tier_channels(tier: str) -> list[str]:
+        if tier == "p3":
+            return sorted(
+                name
+                for name, channel in channels.items()
+                if any(action.ui_fallback for action in channel.actions)
+            )
+        return sorted(
+            name for name, channel in channels.items() if tier in channel.tiers
+        )
+
     payload = {
         "tiers": [
             {
                 "id": tier,
                 "label": TIER_TABLE[tier]["label"],
                 "access": TIER_TABLE[tier]["access"],
-                "channels": sorted(
-                    name for name, channel in channels.items() if tier in channel.tiers
-                ),
+                "kind": "fallback" if tier == "p3" else "automatic",
+                "manual": tier == "p3",
+                "channels": tier_channels(tier),
             }
             for tier in TIERS
         ],
         "channels": [
             {
                 "name": channel.name,
+                "risk": channel_risk(channel),
                 "tiers": list(channel.tiers),
                 "actions": {a.name: list(a.tiers) for a in channel.actions},
+                "ui_fallback_actions": [
+                    a.name for a in channel.actions if a.ui_fallback
+                ],
             }
             for channel in sorted(channels.values(), key=lambda c: c.name)
         ],
@@ -380,16 +418,25 @@ def cmd_tiers(args: argparse.Namespace) -> int:
     print("TIERS (dispatch order)")
     for row in payload["tiers"]:
         print(f"  {row['id'].upper():<3} {row['label']}")
-        print(f"      {row['access']}; {len(row['channels'])} channel(s)")
+        if row["manual"]:
+            print(f"      fallback / manual; {len(row['channels'])} channel(s)")
+        else:
+            print(f"      {row['access']}; {len(row['channels'])} channel(s)")
         if row["channels"]:
             print(f"      {', '.join(row['channels'])}")
         print()
     print("COVERAGE")
-    for row in payload["channels"]:
-        actions = ", ".join(
-            f"{name}({'+'.join(tiers)})" for name, tiers in row["actions"].items()
+    for channel in sorted(channels.values(), key=lambda c: c.name):
+        parts = []
+        for action in channel.actions:
+            tiers = "+".join(action.tiers)
+            if action.ui_fallback:
+                tiers = f"{tiers}+bsk" if tiers else "bsk"
+            parts.append(f"{action.name}({tiers or '-'})")
+        print(
+            f"  {channel.name:<14} {','.join(channel.tiers) or '-':<7} "
+            f"{', '.join(parts)}"
         )
-        print(f"  {row['name']:<14} {','.join(row['tiers']) or '-':<7} {actions}")
     return 0
 
 
@@ -536,7 +583,12 @@ def cmd_profile(args: argparse.Namespace) -> int:
 
 
 def cmd_bsk(args: argparse.Namespace) -> int:
-    return run_bsk(list(args.bsk_args))
+    try:
+        keys = _load_keys()
+    except ReachError:
+        keys = Keys({})
+    guard = _as_bool(keys.get("browser.bsk_guard"), True)
+    return run_bsk(list(args.bsk_args), guard=guard)
 
 
 def cmd_about(args: argparse.Namespace) -> int:

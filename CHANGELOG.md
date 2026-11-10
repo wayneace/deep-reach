@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.11.0 — 2026-11-10
+
+P3 bsk UI 回退与可写边界。
+
+- 分层扩展为 P0 官方接口 → P1 公开网页 → P2 第三方引擎 → P3 bsk UI 回退。
+- P1 只保留 OpenCLI 公开命令；登录态 OpenCLI backend 移除。
+- 登录动作没有自动后端时返回 `NEED_UI`，附 `deep-reach bsk` 回退引导与策略。
+- 新增 `deep-reach bsk`：透传 bsk 全能力（含写操作）；守卫只拦截直接 fetch/XHR 站点内部接口、`debug replay` 和 `evaluate` 网络调用。
+- 移除只读产品边界；OpenCLI 写命令不再被全局拦截；`WRITE_BLOCKED` 仅表示后端不支持写。
+- 新增 `POLICY_BLOCKED`；`NEED_UI` 进入终止码。
+- `http-read` / Jina 归入 P1；`channels` / `doctor` 显示 risk、ui_fallback、bsk profile/warning。
+- bsk 默认 main profile；`browser.bsk_profile` / `browser.bsk_guard` / `risk.allow_high` 可配置。
+- 高风险渠道默认开启但警告；`risk.allow_high: false` 可整体禁用高风险动作。
+
 ## v0.10.1 — 2026-11-09
 
 - 修正两个 key 提示测试在 Windows 上使用 POSIX 路径字面量导致 CI 失败；功能无变化。

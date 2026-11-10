@@ -9,13 +9,13 @@ from deep_reach.runtime.result import NEED_SETUP, POLICY_BLOCKED
 
 
 class BskGuardTest(unittest.TestCase):
-    def _run(self, args, returncode=0):
+    def _run(self, args, returncode=0, guard=True):
         out, err = io.StringIO(), io.StringIO()
         with mock.patch(
             "deep_reach.backends.bsk_guard.subprocess.run"
         ) as run, redirect_stdout(out), redirect_stderr(err):
             run.return_value = mock.Mock(returncode=returncode)
-            code = bsk_guard.run_bsk(args, bin_path="bsk")
+            code = bsk_guard.run_bsk(args, bin_path="bsk", guard=guard)
         return code, out.getvalue(), err.getvalue(), run
 
     def _assert_blocked(self, args):
@@ -85,6 +85,12 @@ class BskGuardTest(unittest.TestCase):
         self.assertEqual(code, 1)
         payload = json.loads(out.getvalue())
         self.assertEqual(payload["error"]["code"], NEED_SETUP)
+
+    def test_guard_can_be_disabled_for_debugging(self):
+        code, _, stderr, run = self._run(["debug", "replay"], guard=False)
+        self.assertEqual(code, 0)
+        run.assert_called_once_with(["bsk", "debug", "replay"])
+        self.assertIn("main browser profile", stderr)
 
 
 if __name__ == "__main__":

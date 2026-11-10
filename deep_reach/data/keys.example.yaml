@@ -1,6 +1,6 @@
 # Deep-Reach keys
 # 所有 key 都是可选的。缺失时对应后端自动降级/禁用，系统继续运行。
-# P0 原生免费接口 → P1 OpenCLI → P2 第三方采集；key 只影响自己那一层的后端。
+# P0 官方接口 → P1 公开网页 → P2 第三方引擎 → P3 bsk UI 回退；key 只影响自己那一层的后端。
 # 复制到 ~/.deep-reach/keys.yaml 后填写。
 # 不要把填写后的文件提交到 git。
 
@@ -46,7 +46,7 @@ official:
 
 xueqiu:
   cookie: ""             # 可选；从已登录 xueqiu.com 浏览器复制 Cookie，通常几小时过期
-                         # 缺失 → hot/hot_stocks 走 OpenCLI；quote/search 优先腾讯公开接口
+                         # 缺失 → hot/hot_stocks 走 bsk UI 回退；quote/search 优先腾讯公开接口
 
 search:
   exa:
@@ -68,4 +68,13 @@ browser:
   # auto = 自动读取 OpenCLI doctor 里已连接的 Chrome contextId。
   # 也可以填 doctor 输出的 contextId；不要填任意名字，否则会连到不存在的 profile。
   opencli_profile: "auto"
-  # B站 / 雪球的登录态由 OpenCLI 专用 profile 管理，不要写在这里。
+  # P3 bsk 默认使用主浏览器 profile；未来可改为 dedicated 专用 profile。
+  bsk_profile: "main"
+  # 守卫默认开启：只拦截直接 fetch/XHR 站点内部接口和 debug replay。
+  bsk_guard: true
+
+risk:
+  # 高风险渠道默认开启，但每次都会警告；设为 false 可整体禁用高风险动作。
+  allow_high: true
+
+# B站 / 雪球的登录态由 OpenCLI 专用 profile 管理，不要写在这里。
