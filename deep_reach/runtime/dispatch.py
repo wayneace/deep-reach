@@ -23,11 +23,14 @@ from .keys import Keys, default_keys_path, template_path
 from .limits import acquire_request, is_browser_backend, pace, query_slot
 from .result import (
     BAD_INPUT,
+    BSK_UI_POLICY,
     BUSY,
     ERROR_PRIORITY,
     FINAL_CODES,
     KEY_MISSING,
+    NEED_LOGIN,
     NEED_SETUP,
+    NEED_UI,
     RATE_LIMITED,
     SOURCE_DISABLED,
     TIMEOUT,
@@ -145,6 +148,44 @@ def _attempt(spec, result: str, **extra) -> dict:
     return row
 
 
+def _need_ui(
+    channel: Channel,
+    action: Action,
+    attempts: list[dict],
+    elapsed_ms: int,
+    keys: Optional[Keys],
+) -> dict:
+    """Return the bsk UI handoff instead of pretending P3 is an automatic backend."""
+    profile = "main"
+    if keys is not None:
+        profile = str(keys.get("browser.bsk_profile") or "main")
+    risk = action.risk or ("high" if action.requires == "login" else "medium")
+    hint = (
+        "使用 `deep-reach bsk ...`（守卫版）回退："
+        "`deep-reach bsk session start --json` → `navigate` → `observe` → "
+        "`click` → `session stop`。bsk 全能力可用（含写操作）；"
+        "不要直接 fetch 站点内部接口；写操作有副作用，请确认用户意图。"
+    )
+    return envelope(
+        channel=channel.name,
+        action=action.name,
+        tier="p3",
+        elapsed_ms=elapsed_ms,
+        attempts=attempts,
+        error=ReachError(
+            NEED_UI,
+            "没有自动后端能完成这个动作，请用 bsk UI 回退。",
+            hint=hint,
+        ),
+        extra_meta={
+            "fallback": "bsk-ui",
+            "profile": profile,
+            "risk": risk,
+            "policy": BSK_UI_POLICY,
+        },
+    )
+
+
 def run_action(
     channel: Channel,
     action_name: str,
@@ -179,6 +220,21 @@ def run_action(
         )
 
     keys = keys or Keys({})
+    if action.requires == "login" and not any(
+        spec.supports_login for spec in action.backends
+    ):
+        if action.ui_fallback:
+            return _need_ui(channel, action, [], elapsed(), keys)
+        return envelope(
+            channel=channel.name,
+            action=action_name,
+            elapsed_ms=elapsed(),
+            error=ReachError(
+                NEED_LOGIN,
+                "login is required but no backend supports a login session",
+            ),
+        )
+
     clock = Clock(timeout or action.timeout)
     attempts: list[dict] = []
     errors: list[ReachError] = []
@@ -195,6 +251,23 @@ def run_action(
             )
 
         for spec in action.backends:
+            if action.requires == "login" and not spec.supports_login:
+                attempts.append(
+                    _attempt(
+                        spec,
+                        NEED_LOGIN,
+                        skipped=True,
+                        message="backend does not support login",
+                    )
+                )
+                errors.append(
+                    ReachError(
+                        NEED_LOGIN,
+                        f"{spec.label} does not support login",
+                    )
+                )
+                continue
+
             if spec.requires_key:
                 key_paths = spec.required_keys(channel)
                 if any(not path for path in key_paths):
@@ -349,6 +422,9 @@ def run_action(
             )
     except ReachError as exc:
         errors.append(exc)
+
+    if action.ui_fallback:
+        return _need_ui(channel, action, attempts, elapsed(), keys)
 
     return envelope(
         channel=channel.name,

@@ -31,6 +31,7 @@ SOURCE_DISABLED = "SOURCE_DISABLED"
 CONFIG_ERROR = "CONFIG_ERROR"
 WRITE_BLOCKED = "WRITE_BLOCKED"
 BUSY = "BUSY"
+NEED_UI = "NEED_UI"
 
 #: Codes where trying another backend cannot help. RATE_LIMITED and BUSY are
 #: final on purpose, matching Agent-Reach: a platform rate limit or a full
@@ -49,6 +50,7 @@ FINAL_CODES = frozenset(
         BUSY,
         SOURCE_DISABLED,
         WRITE_BLOCKED,
+        NEED_UI,
     }
 )
 
@@ -69,6 +71,7 @@ RETRYABLE_CODES = frozenset(
 ERROR_PRIORITY = (
     PLATFORM_BLOCKED,
     NEED_LOGIN,
+    NEED_UI,
     RATE_LIMITED,
     QUOTA_EXHAUSTED,
     BUSY,
@@ -79,6 +82,18 @@ ERROR_PRIORITY = (
     NOT_FOUND,
     SOURCE_DISABLED,
 )
+
+#: The policy attached to a NEED_UI handoff. bsk may use all of its
+#: capabilities, including writes; only direct internal-API access is forbidden.
+BSK_UI_POLICY = {
+    "bsk": "all capabilities, including writes",
+    "forbid": [
+        "direct fetch/XHR to site internal APIs",
+        "debug replay",
+        "network calls inside evaluate",
+    ],
+    "warn": ["debug rule_add", "destructive write actions"],
+}
 
 DEFAULT_HINTS = {
     NEED_SETUP: "Run `deep-reach doctor` to see what is missing.",
@@ -98,6 +113,11 @@ DEFAULT_HINTS = {
     CONFIG_ERROR: "Fix the configuration file and retry.",
     WRITE_BLOCKED: "Deep-Reach is read-only; this command is blocked.",
     BUSY: "Another Deep-Reach query is using the shared browser; retry in a minute.",
+    NEED_UI: (
+        "No automatic backend can complete this action. Use `deep-reach bsk ...` "
+        "(guarded); bsk may use all capabilities, including writes. Do not fetch "
+        "site internal APIs directly; confirm user intent before destructive writes."
+    ),
 }
 
 _MAX_MESSAGE_CHARS = 500
@@ -164,21 +184,25 @@ def envelope(
     elapsed_ms: int = 0,
     attempts: Optional[list] = None,
     error: Optional[ReachError] = None,
+    extra_meta: Optional[dict] = None,
 ) -> dict:
     attempts = list(attempts or [])
+    meta = {
+        "elapsed_ms": elapsed_ms,
+        "attempts": attempts,
+        "degraded": any(a.get("result") != "ok" for a in attempts),
+    }
+    if extra_meta:
+        meta.update(extra_meta)
     return {
         "schema_version": SCHEMA_VERSION,
         "ok": error is None,
         "channel": channel,
         "action": action,
         "backend": backend if error is None else None,
-        "tier": tier if error is None else None,
+        "tier": tier,
         "items": list(items or []) if error is None else [],
-        "meta": {
-            "elapsed_ms": elapsed_ms,
-            "attempts": attempts,
-            "degraded": any(a.get("result") != "ok" for a in attempts),
-        },
+        "meta": meta,
         "error": None
         if error is None
         else {

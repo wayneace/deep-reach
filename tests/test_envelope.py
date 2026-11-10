@@ -4,7 +4,9 @@ import unittest
 from deep_reach.runtime.result import (
     BAD_INPUT,
     DEFAULT_HINTS,
+    FINAL_CODES,
     KEY_MISSING,
+    NEED_UI,
     ReachError,
     dump,
     envelope,
@@ -63,6 +65,22 @@ class EnvelopeTest(unittest.TestCase):
     def test_dump_is_json(self):
         env = envelope(channel="x", action="search")
         self.assertEqual(json.loads(dump(env))["schema_version"], 1)
+
+    def test_need_ui_is_final_and_hint_mentions_bsk(self):
+        self.assertIn(NEED_UI, FINAL_CODES)
+        self.assertIn("deep-reach bsk", DEFAULT_HINTS[NEED_UI])
+
+    def test_envelope_merges_extra_meta(self):
+        env = envelope(
+            channel="x",
+            action="search",
+            tier="p3",
+            error=ReachError(NEED_UI, "use bsk"),
+            extra_meta={"fallback": "bsk-ui", "risk": "high"},
+        )
+        self.assertEqual(env["tier"], "p3")
+        self.assertEqual(env["meta"]["fallback"], "bsk-ui")
+        self.assertEqual(env["meta"]["risk"], "high")
 
 
 if __name__ == "__main__":

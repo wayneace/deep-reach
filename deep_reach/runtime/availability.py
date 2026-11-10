@@ -108,6 +108,9 @@ def action_availability(
 ) -> tuple[bool, list[str]]:
     reasons: list[str] = []
     for spec in action.backends:
+        if action.requires == "login" and not spec.supports_login:
+            reasons.append(f"{spec.label}: does not support login")
+            continue
         reason = backend_unavailable_reason(spec, channel, env)
         if reason is None:
             return True, []

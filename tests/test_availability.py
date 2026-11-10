@@ -224,6 +224,46 @@ class AvailabilityTest(unittest.TestCase):
         self.assertIn("search", hint)
         self.assertIn("不可用", hint)
 
+    def test_login_action_skips_public_only_backend(self):
+        ch = Channel(
+            name="x",
+            category="social",
+            status="needs_login",
+            actions=(
+                Action(
+                    "search",
+                    requires="login",
+                    backends=(BackendSpec("public", "search"),),
+                ),
+            ),
+        )
+        result = channel_availability(ch, env(installed=True, connected=True))
+        self.assertNotIn("search", result.available_actions)
+        self.assertIn("does not support login", " ".join(result.unavailable_actions["search"]))
+
+    def test_login_action_accepts_supports_login_backend(self):
+        ch = Channel(
+            name="xueqiu",
+            category="social",
+            status="needs_login",
+            actions=(
+                Action(
+                    "hot",
+                    requires="login",
+                    backends=(
+                        BackendSpec(
+                            "xueqiu-api",
+                            "hot",
+                            tier="p0",
+                            supports_login=True,
+                        ),
+                    ),
+                ),
+            ),
+        )
+        result = channel_availability(ch, env(installed=False))
+        self.assertIn("hot", result.available_actions)
+
 
 if __name__ == "__main__":
     unittest.main()
