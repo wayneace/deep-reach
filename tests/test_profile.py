@@ -1,10 +1,11 @@
 import os
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
 
-from deep_reach.runtime.profile import set_context
+from deep_reach.runtime.profile import chrome_path, launch, set_context
 from deep_reach.runtime.result import ReachError
 
 
@@ -59,6 +60,53 @@ class ProfileTest(unittest.TestCase):
             with self.assertRaises(ReachError):
                 set_context("ctx 123")
 
+    def test_chrome_path_finds_macos_app_bundle(self):
+        if sys.platform != "darwin":
+            self.skipTest("macOS path")
+        target = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+        with mock.patch(
+            "deep_reach.runtime.profile.Path.exists",
+            autospec=True,
+            side_effect=lambda path: str(path) == target,
+        ), mock.patch("deep_reach.runtime.profile.shutil.which", return_value=None):
+            self.assertEqual(chrome_path(), target)
+
+    def test_profile_launch_uses_sanitized_env_and_private_dir(self):
+        fake = mock.Mock(pid=1234)
+        directory = Path(tempfile.mkdtemp())
+        with mock.patch(
+            "deep_reach.runtime.profile.chrome_path", return_value="/chrome"
+        ), mock.patch(
+            "deep_reach.runtime.profile.profile_dir", return_value=directory
+        ), mock.patch(
+            "deep_reach.runtime.profile.subprocess.Popen", return_value=fake
+        ) as popen, mock.patch.dict(
+            "os.environ", {"DEEP_REACH_OFFICIAL_GITHUB_TOKEN": "x"}
+        ):
+            result = launch()
+        self.assertTrue(result["ok"])
+        env = popen.call_args.kwargs["env"]
+        self.assertNotIn("DEEP_REACH_OFFICIAL_GITHUB_TOKEN", env)
+        self.assertEqual(directory.stat().st_mode & 0o777, 0o700)
+
+    def test_set_context_preserves_symlink_target(self):
+        if os.name == "nt":
+            self.skipTest("symlinks need privileges on Windows")
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "dotfiles-keys.yaml"
+            target.write_text(
+                'version: 1\nbrowser:\n  opencli_profile: ""\n', encoding="utf-8"
+            )
+            link = Path(tmp) / "keys.yaml"
+            link.symlink_to(target)
+            os.environ["DEEP_REACH_KEYS_FILE"] = str(link)
+            set_context("ctx-1234")
+            self.assertTrue(link.is_symlink())
+            self.assertIn(
+                'opencli_profile: "ctx-1234"',
+                target.read_text(encoding="utf-8"),
+            )
+
     def test_set_context_survives_chmod_failure(self):
         if os.name == "nt":
             self.skipTest("POSIX permissions only")
@@ -66,7 +114,8 @@ class ProfileTest(unittest.TestCase):
             path = Path(tmp) / "keys.yaml"
             os.environ["DEEP_REACH_KEYS_FILE"] = str(path)
             with mock.patch(
-                "deep_reach.runtime.profile.os.chmod", side_effect=OSError("nope")
+                "deep_reach.runtime.secure_paths.os.chmod",
+                side_effect=OSError("nope"),
             ):
                 set_context("ctx-123")
             self.assertIn(
