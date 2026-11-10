@@ -90,11 +90,11 @@ deep-reach x search "AI" --limit 5
 
 ## 6. Profile
 
-- `profile status`：显示已连接 contextId 和当前设置。
-- `profile set <contextId>`：写入 `~/.deep-reach/keys.yaml`。
-- `profile launch`：用 `%LOCALAPPDATA%\deep-reach\chrome-profile` 启动专用 Chrome。
+- `profile status`：显示所有已连接 contextId、当前绑定和连接状态。
+- `profile set <contextId>`：校验后原子写入 `~/.deep-reach/keys.yaml`。
+- `profile launch`：用 `~/.deep-reach/chrome-profile` 启动专用 Chrome。
 - 专用 profile 需要手动安装一次 OpenCLI 扩展。
-- 默认 `auto`，但文档明确：auto 会复用当前连接的 Chrome profile，不是隔离。
+- 只支持显式绑定的专用 profile；`auto` 视为未配置，P1 不运行，绝不自动选择主 profile。
 
 ## 7. 能力契约
 

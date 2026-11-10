@@ -83,7 +83,7 @@
 ## 分层语义
 
 - **P0**：官方接口。缺 key 只禁用该后端，不影响其他层。
-- **P1**：公开网页：直连 HTTP、Jina Reader、OpenCLI 公开命令；不替用户登录、不碰密码。
+- **P1**：公开网页：直连 HTTP、Jina Reader、OpenCLI 公开命令；不替用户登录、不碰密码。OpenCLI 只使用显式绑定的专用 Chrome profile；未执行 `deep-reach profile launch` + `profile set` 时 P1 显示 `needs_setup`，不会复用主浏览器登录态。
 - **P2**：第三方搜索/采集引擎，只在 P0/P1 不可用时使用。
 - **P3**：bsk UI 回退，agent 驱动；自动后端全部失败或没有登录后端时返回 `NEED_UI`，用 `deep-reach bsk` 接手。bsk 全能力可用（含写操作），守卫只拦截直接 fetch/XHR 站点内部接口和 `debug replay`。
 

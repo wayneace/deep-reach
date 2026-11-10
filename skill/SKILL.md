@@ -20,7 +20,7 @@ P3 bsk 可执行写操作但需确认用户意图。它负责把分散在社媒�
 | 层 | 路径 | 凭证 |
 |---|---|---|
 | P0 | 官方接口：官方 API 免费层 / 公开 JSON / 官方 CLI | none / key / oauth |
-| P1 | 公开网页：直连 HTTP / Jina Reader / OpenCLI 公开命令 | none / 可选 key |
+| P1 | 公开网页：直连 HTTP / Jina Reader / OpenCLI 公开命令 | none / 可选 key；OpenCLI 需专用 profile |
 | P2 | 第三方搜索/采集引擎：Tavily / Brave / Firecrawl / Bright Data | key / quota |
 | P3 | bsk UI 回退：`deep-reach bsk`（守卫版） | public / login |
 

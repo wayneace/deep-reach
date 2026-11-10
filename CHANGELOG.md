@@ -2,12 +2,24 @@
 
 ## v0.12.0 — 2026-11-11
 
+安全加固与专用浏览器 profile；包含一个破坏性变更。
+
+- **破坏性变更**：移除 `opencli_profile: auto` 和自动选择第一个已连接 profile 的行为。P1 只运行显式绑定的专用 Chrome profile；`auto`、空值或非法 contextId 都视为未配置，P1 显示 `needs_setup`。
+- 迁移：运行 `deep-reach profile launch`，在专用窗口安装/启用 OpenCLI 扩展，然后 `deep-reach profile status` + `deep-reach profile set <contextId>`。专用 profile 内需要重新登录 P1 网站；P0/P2 不受影响。
+- keys.yaml 在 POSIX 上读取和写入都会收紧到 `0600`；`~/.deep-reach` 和专用 Chrome profile 目录收紧到 `0700`。
+- YAML 语法错误只报文件名和行列，不再回显可能含 key 的出错行。
+- 已知 key 值从 `ReachError`、JSON、`--text` 摘要和 `doctor` 文本中脱敏；脱敏在 JSON 序列化前执行。
+- OpenCLI、bsk、Chrome、npm 和 taskkill 子进程使用过滤后的环境，不再继承 `DEEP_REACH_*` 或名字像凭据的变量。
+- 跨域重定向剥离 `Authorization`、`Cookie`、`X-API-Key`、`X-Subscription-Token`、`X-Goog-Api-Key` 等凭据头和敏感查询参数；Jina、Xueqiu 使用同一套重定向校验。
+- YouTube API key 从 URL 查询参数移到 `X-Goog-Api-Key` 请求头。
+- `doctor --json` 增加 `keys_file_mode`、`keys_file_secure`、`keys_file_note` 和完整的 `profile` 块；`doctor` 文本显示专用 profile、后台窗口模式与权限告警。
+- `profile launch` 补充 macOS / Linux 标准 Chrome 路径；`profile set` 校验 contextId 并原子写入，保留 dotfile symlink。
 - 移除 `roadmap` 命令和 `planned` 概念；注册表只包含已实现渠道。
 - `channels` / `capabilities` 移除 `--all` 参数。
 - `doctor` 不再输出 planned 列表和计数。
 - 未实现渠道不再占位；以后直接按 P0 → P1 → P2 → P3 添加。
 - 自定义 `channels.yaml` 中的 `level: planned` 条目会返回 `CONFIG_ERROR`；请删除占位条目，或实现后再加入。
-- 测试数更新为 255。
+- 测试数更新为 285。
 
 ## v0.11.1 — 2026-11-11
 

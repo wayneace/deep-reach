@@ -20,6 +20,8 @@ PROMISES = [
     "本地优先：配置、状态、浏览器 profile 都在本机",
     "证据可追溯：source / url / backend / tier / fetched_at",
     "不互相踩：同站并发槽、搜索间隔、限流冷却、失败后端暂停",
+    "密钥不泄露：keys 0600、子进程不继承 key、输出脱敏、跨域重定向不带凭据",
+    "不碰主浏览器登录态：P1 只使用显式绑定的专用 Chrome profile",
 ]
 
 NON_GOALS = [

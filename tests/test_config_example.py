@@ -15,6 +15,13 @@ class ConfigExampleTest(unittest.TestCase):
         self.assertTrue(data["browser"]["bsk_guard"])
         self.assertTrue(data["risk"]["allow_high"])
 
+    def test_opencli_profile_defaults_to_empty_and_never_auto(self):
+        data = yaml.safe_load(
+            (ROOT / "deep_reach/data/keys.example.yaml").read_text(encoding="utf-8")
+        )
+        self.assertEqual(data["browser"]["opencli_profile"], "")
+        self.assertNotIn("auto", str(data["browser"]["opencli_profile"]))
+
     def test_template_has_no_keys_for_removed_channels(self):
         data = yaml.safe_load(
             (ROOT / "deep_reach/data/keys.example.yaml").read_text(encoding="utf-8")

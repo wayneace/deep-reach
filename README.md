@@ -161,6 +161,14 @@ deep_reach/data/keys.example.yaml
 
 运行 `deep-reach setup` 会打印当前安装里的模板绝对路径。所有 key 都是可选的；缺失时对应后端禁用或降级，不阻塞其他渠道。
 
+安全默认值：
+
+- keys.yaml 在 POSIX 上会自动收紧到 `0600`，`~/.deep-reach` 收紧到 `0700`。
+- OpenCLI、bsk、Chrome、npm 等子进程只拿到过滤后的环境，不会继承 `DEEP_REACH_*` 或名字像凭据的变量。
+- 已知 key 值会从错误、JSON 输出和 `--text` 输出里脱敏；YAML 语法错误只报行列，不回显文件内容。
+- 跨域重定向会剥掉 `Authorization`、`Cookie`、`X-API-Key`、`X-Subscription-Token`、`X-Goog-Api-Key` 等凭据头。
+- 密钥目前不做静态加密；边界是文件权限 + 独立的 OS 账户。共享机器上不要用环境变量长期保存 key。
+
 GitHub token 可选：有 token 5,000 req/h，没有 60 req/h。  
 YouTube Data API key 可选：有 key 走 P0，没有 key 自动走 OpenCLI。  
 eBay 需要 `official.ebay.client_id` + `client_secret`；Etsy 需要 `official.etsy.api_key`；Product Hunt 需要 `official.producthunt.token`。  
@@ -187,24 +195,23 @@ OpenCLI 通过 Browser Bridge 扩展连接 Chrome。先安装 CLI：
 npm install -g @jackwener/opencli   # 当前推荐 2.0.3
 ```
 
-首次使用还需要手动安装一次扩展：
+P1 只使用**显式绑定的专用 Chrome profile**。Deep-Reach 不会自动选择已连接的 profile，也不会复用主浏览器的登录态。`opencli_profile` 留空或填 `auto` 时，P1 渠道显示 `needs_setup`，不会运行 OpenCLI。
 
-1. 打开 Chrome。
-2. 安装扩展：<https://chromewebstore.google.com/detail/opencli/ildkmabpimmkaediidaifkhjpohdnifk>
-3. 在 `chrome://extensions` 确认启用。
-4. 验证：`uv run deep-reach doctor`
-
-`doctor` 会对比已安装 OpenCLI 与推荐版本（当前 2.0.3），落后时给出升级命令。OpenCLI 不自动升级。
-
-当前 `opencli_profile: auto` 会复用已连接的 Chrome profile。  
-如果要做 Agent-Reach 那样的隔离：
+首次设置：
 
 ```bash
-uv run deep-reach profile launch     # 用 %LOCALAPPDATA%\deep-reach\chrome-profile 启动专用 Chrome
-# 在这个窗口安装 OpenCLI 扩展
-uv run deep-reach profile status     # 获取 contextId
+uv run deep-reach profile launch     # 用 ~/.deep-reach/chrome-profile 启动专用 Chrome
+# 在这个窗口安装/启用 OpenCLI 扩展：
+# https://chromewebstore.google.com/detail/opencli/ildkmabpimmkaediidaifkhjpohdnifk
+uv run deep-reach profile status     # 查看所有已连接 contextId
 uv run deep-reach profile set <contextId>
 ```
+
+之后 `deep-reach doctor` 会显示 `browser: dedicated <contextId> (connected)`。专用 profile 里的网站需要单独登录；P0/P2 渠道不受影响。`doctor` 会对比已安装 OpenCLI 与推荐版本，落后时给出升级命令；OpenCLI 不自动升级。
+
+`OPENCLI_WINDOW` 固定为 `background`：命令不会抢前台窗口。Browser Bridge **没有真正的 headless 模式**；真 headless 只能走 CDP，会失去扩展和专用 profile 的登录态，因此不在支持范围内。
+
+从旧版本迁移：把 `opencli_profile: "auto"` 改成 `""`（或直接执行 `profile set`）。升级后 P1 不会复用主 profile，必须按上面的流程重新绑定。
 
 ### bsk UI 回退（P3）
 

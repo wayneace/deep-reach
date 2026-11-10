@@ -58,9 +58,11 @@ search:
     api_key: ""          # 缺失 → 20 RPM/IP；有 key → 500 RPM
 
 browser:
-  # auto = 自动读取 OpenCLI doctor 里已连接的 Chrome contextId。
-  # 也可以填 doctor 输出的 contextId；不要填任意名字，否则会连到不存在的 profile。
-  opencli_profile: "auto"
+  # 必须是专用 Chrome profile 的 contextId；留空则 P1 不运行。
+  # 不要填 auto：Deep-Reach 不会自动选择已连接的 profile，也不会复用主浏览器登录态。
+  # 流程：deep-reach profile launch → 在专用窗口安装 OpenCLI 扩展 →
+  #       deep-reach profile status → deep-reach profile set <contextId>
+  opencli_profile: ""
   # P3 bsk 使用当前已连接的浏览器 profile，不在这里配置。
   # 如需指定实例，直接把 bsk 的 --browser <id|label> 传给 `deep-reach bsk session start`。
   # 守卫默认开启：只拦截直接 fetch/XHR 站点内部接口和 debug replay。
