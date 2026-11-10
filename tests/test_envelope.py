@@ -7,6 +7,7 @@ from deep_reach.runtime.result import (
     FINAL_CODES,
     KEY_MISSING,
     NEED_UI,
+    WRITE_BLOCKED,
     ReachError,
     dump,
     envelope,
@@ -81,6 +82,11 @@ class EnvelopeTest(unittest.TestCase):
         self.assertEqual(env["tier"], "p3")
         self.assertEqual(env["meta"]["fallback"], "bsk-ui")
         self.assertEqual(env["meta"]["risk"], "high")
+
+    def test_write_blocked_hint_is_not_a_read_only_promise(self):
+        hint = DEFAULT_HINTS[WRITE_BLOCKED]
+        self.assertNotIn("read-only", hint.lower())
+        self.assertIn("backend", hint.lower())
 
 
 if __name__ == "__main__":

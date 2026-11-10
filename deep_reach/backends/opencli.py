@@ -1,7 +1,8 @@
 """OpenCLI 2.x backend.
 
 OpenCLI is an external CLI. We run it in the Deep-Reach browser profile,
-read its JSON envelope, block write commands, and normalize the result.
+read its JSON envelope, and normalize the result. Write commands are allowed
+when the channel action declares them.
 """
 
 from __future__ import annotations
@@ -21,7 +22,6 @@ from ..runtime.result import (
     NEED_SETUP,
     TIMEOUT,
     UPSTREAM_BROKEN,
-    WRITE_BLOCKED,
     ReachError,
 )
 from .opencli_compat import classify_opencli_error, opencli_items, parse_envelope
@@ -258,11 +258,6 @@ class OpenCLIClient:
         return command in self.read_commands(site)
 
     def run(self, site: str, command: str, args: list[str], timeout: float):
-        if not self.is_read(site, command):
-            raise ReachError(
-                WRITE_BLOCKED,
-                f"{site} {command} is not a read command; Deep-Reach is read-only",
-            )
         result = self._run([site, command, *args, "-f", "json"], timeout=timeout)
         stdout = result.stdout.strip()
         if not stdout:

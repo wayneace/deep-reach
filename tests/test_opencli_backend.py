@@ -12,7 +12,7 @@ from deep_reach.backends.opencli import (
 from deep_reach.channels.base import Action, BackendSpec, Channel, Param
 from deep_reach.runtime.dispatch import BACKENDS, run_action
 from deep_reach.runtime.keys import Keys
-from deep_reach.runtime.result import NEED_SETUP, WRITE_BLOCKED, ReachError
+from deep_reach.runtime.result import NEED_SETUP, ReachError
 
 
 class FakeClient(OpenCLIClient):
@@ -56,12 +56,16 @@ class OpenCLIBackendTest(unittest.TestCase):
         client = FakeClient()
         self.assertTrue(client.is_read("twitter", "search"))
 
-    def test_write_command_blocked(self):
+    def test_write_command_allowed(self):
         client = FakeClient()
         self.assertFalse(client.is_read("twitter", "post"))
-        with self.assertRaises(ReachError) as ctx:
-            client.run("twitter", "post", [], timeout=5)
-        self.assertEqual(ctx.exception.code, WRITE_BLOCKED)
+        result = SimpleNamespace(
+            stdout='{"ok":true,"data":{"posted":true}}', stderr="", returncode=0
+        )
+        with mock.patch.object(client, "_run", return_value=result) as run:
+            data = client.run("twitter", "post", [], timeout=5)
+        self.assertEqual(data, {"posted": True})
+        run.assert_called_once()
 
     def test_posix_kill_tree_uses_process_group(self):
         if os.name == "nt":

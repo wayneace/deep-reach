@@ -1,8 +1,8 @@
 # Deep-Reach
 
-**给 AI agent 一个只读、免费优先、按层降级的通用上网入口。**
+**给 AI agent 一个免费优先、按层降级、可读可写的通用上网入口。**
 
-先走平台原生免费接口（P0），再走 OpenCLI 复用登录态（P1），最后才用第三方采集服务（P2）。产品调研（社媒、Amazon、众筹、专利/版权）是第一个完整验证的垂直；其他网站默认只依赖 OpenCLI 或 P2。
+先走平台原生免费接口（P0），再走公开网页 / OpenCLI 公开命令（P1），再用第三方采集服务（P2）；登录态页面和写操作走 bsk UI 回退（P3）。产品调研（社媒、Amazon、众筹、专利/版权）是第一个完整验证的垂直；其他网站默认只依赖公开网页、P2 或 bsk 回退。
 
 - 产品定义：[PRODUCT.md](PRODUCT.md)
 - 重构计划：[REFACTOR_PLAN.md](REFACTOR_PLAN.md)
@@ -12,7 +12,7 @@
 - 版本 **0.10.1**；176 个单元测试。
 - 21 个可见渠道，14 个有 P0 覆盖；8 个 default 渠道 live smoke 通过。
 - `channels` / `doctor` 的 `status` 是**当前环境实测值**（`ready` / `degraded` / `needs_setup` / `needs_login` / `needs_key` / `experimental`）；`declared_status` 保留注册表声明。
-- 只读：不发帖、不评论、不点赞、不私信。
+- 可读可写：写操作由动作声明决定；P3 bsk 可执行写操作，调用方需确认用户意图。
 
 ## 快速开始
 
@@ -30,20 +30,22 @@ uv run deep-reach bilibili search "收纳" --limit 5
 > `uv run` 使用项目内 `.venv` 和 `uv.lock`，不安装到全局 PATH。  
 > 一次性工具用 `uvx`；需要全局命令用 `uv tool install`。
 
-## 分层：P0 → P1 → P2
+## 分层：P0 → P1 → P2 → P3
 
 | 层 | 含义 | 凭证 | 已接后端 |
 |---|---|---|---|
-| **P0** | 平台原生免费接口：官方 API 免费层、公开 JSON、原生 CLI | 可选 key / 可选登录 | `bilibili-public`、`tencent-quote`、`tencent-search`、`http-read`、`youtube-api`、`github-api`、`v2ex-public`、`xueqiu-api`、`ebay-api`、`etsy-api`、`producthunt-api`、`uspto-odp`、`epo-ops` |
-| **P1** | OpenCLI 浏览器桥，复用已连接 Chrome 的登录态 | 可选登录 | `opencli-*` |
-| **P2** | 第三方阅读/采集服务 | 可选 key | `jina`、`tavily`、`brave`、`firecrawl`、`brightdata` |
+| **P0** | 官方接口：官方 API 免费层、公开 JSON、官方 CLI | none / key / oauth | `bilibili-public`、`tencent-quote`、`tencent-search`、`youtube-api`、`github-api`、`v2ex-public`、`xueqiu-api`、`ebay-api`、`etsy-api`、`producthunt-api`、`uspto-odp`、`epo-ops` |
+| **P1** | 公开网页：直连 HTTP、Jina Reader、OpenCLI 公开命令 | none / 可选 key | `http-read`、`jina`、`opencli-*`（仅公开） |
+| **P2** | 第三方搜索/采集引擎 | key / quota | `tavily`、`brave`、`firecrawl`、`brightdata` |
+| **P3** | bsk UI 回退：agent 驱动，不写站点 recipe | public / login | `deep-reach bsk`（守卫版） |
 
 规则：
 
-- 注册表强制按 P0 → P1 → P2 排序；YAML 写反了也不会改变顺序。
-- 缺 key 只跳过需要 key 的后端。
+- P0 → P1 → P2 自动排序；P3 是回退引导，不参与自动 backend 链。
+- 缺 key 只跳过需要 key 的后端；登录动作只尝试 `supports_login` 的后端。
 - P0 配额耗尽、未登录会继续降层；`RATE_LIMITED` / `BUSY` / 风控 / 参数错误 / 404 是终止错误。
-- 全部失败时报告最可行动的错误：能通过登录解决的，优先提示登录。
+- 自动后端全部失败或没有登录后端时，返回 `NEED_UI`，由 agent 用 `deep-reach bsk` 接手。
+- P3 守卫只拦直接 fetch/XHR 站点内部接口和 `debug replay`；bsk 其他能力（含写操作）可用。
 
 ```bash
 uv run deep-reach tiers          # 分层定义 + 每个渠道的覆盖
@@ -69,7 +71,7 @@ uv run deep-reach tiers --json
 ## 产品承诺
 
 - **一个动词表**：`search` / `read` / `comments` / `product` / `bestsellers` / `quote`。
-- **只读**：不发帖、不评论、不点赞、不私信。
+- **可读可写**：写操作由动作声明决定；P3 bsk 可写，但写操作有副作用，必须确认用户意图。
 - **按层降级**：原生免费接口 → OpenCLI → 第三方阅读器；不调用付费 API。
 - **没有 key 也能跑**：缺 key / 缺登录只降级对应渠道。
 - **说人话**：错误码之外，`doctor` 告诉你下一步。
@@ -248,7 +250,8 @@ MIT，见 [LICENSE](LICENSE)。第三方说明见 [NOTICE](NOTICE)。
 
 ## 边界
 
-- 只读；不替用户登录；不索要密码。
+- 不替用户登录；不索要密码；写操作必须确认用户意图。
+- P3 bsk 守卫只拦截直接 fetch/XHR 站点内部接口和 `debug replay`，不限制 bsk 其他能力。
 - 只使用各家的免费额度/免费 credit；不自动充值，不接需要付费的调用。
 - 不自建爬虫集群；P2 只调用第三方公开服务。
 - `web read` 默认只访问 http/https 公网地址；localhost、回环、私有网段、链路本地地址会被拒绝，重定向目标也会重新校验。确实需要访问内网时，显式设置 `DEEP_REACH_ALLOW_PRIVATE_URLS=1`。

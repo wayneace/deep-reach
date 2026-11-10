@@ -114,7 +114,7 @@ DEFAULT_HINTS = {
     QUOTA_EXHAUSTED: "Free-tier quota is exhausted; the fallback will be used.",
     SOURCE_DISABLED: "No backend is available for this source.",
     CONFIG_ERROR: "Fix the configuration file and retry.",
-    WRITE_BLOCKED: "Deep-Reach is read-only; this command is blocked.",
+    WRITE_BLOCKED: "This backend does not support this write action.",
     BUSY: "Another Deep-Reach query is using the shared browser; retry in a minute.",
     NEED_UI: (
         "No automatic backend can complete this action. Use `deep-reach bsk ...` "

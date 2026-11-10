@@ -1,26 +1,28 @@
 ---
 name: deep-reach
 description: |
-  通用 agent 只读上网入口，按 P0 原生免费接口 → P1 OpenCLI → P2 第三方采集降级。
+  通用 agent 上网入口，按 P0 官方接口 → P1 公开网页 → P2 第三方引擎 → P3 bsk UI 回退降级。
   重点覆盖产品调研：国内外社媒、Amazon 选品、众筹、专利/版权。用 `deep-reach`
-  CLI 做只读搜索和抓取。当用户要做选品、竞品调研、社媒口碑/差评、Reddit/小红书/
+  CLI 做搜索、抓取和写操作。当用户要做选品、竞品调研、社媒口碑/差评、Reddit/小红书/
   知乎/微博/B站/抖音搜索、Amazon 商品或榜单、Kickstarter/Indiegogo、USPTO/EPO/
-  专利商标检索、GitHub 仓库/issue、V2EX 帖子，或读取公开网页时使用。不要用于 Amazon 关键词量/流量数据
-  （用 sellersprite-web）、写帖/评论/私信，或需要付费 API 的场景。
+  专利商标检索、GitHub 仓库/issue、V2EX 帖子，或读取公开网页时使用。写操作需用户明确确认；
+  不要用于 Amazon 关键词量/流量数据（用 sellersprite-web）或需要付费 API 的场景。
 ---
 
 # Deep-Reach
 
-Deep-Reach 是 AI agent 的**只读上网入口**。它不分析、不写操作；它负责把分散在社媒、
-电商、众筹、专利网站和公开网页上的内容稳定地取回来，并返回统一的 JSON。
+Deep-Reach 是 AI agent 的**上网入口**。它不分析；可读可写，写操作由动作声明，
+P3 bsk 可执行写操作但需确认用户意图。它负责把分散在社媒、电商、众筹、专利网站和
+公开网页上的内容稳定地取回来，并返回统一的 JSON。
 
 后端按层降级：
 
 | 层 | 路径 | 凭证 |
 |---|---|---|
-| P0 | 平台原生免费接口 / 公开 JSON / 直连 HTTP / 原生 CLI | 可选 key、可选登录 |
-| P1 | OpenCLI 浏览器桥，复用已登录 Chrome | 可选登录 |
-| P2 | Jina 等第三方阅读/采集服务 | 可选 key |
+| P0 | 官方接口：官方 API 免费层 / 公开 JSON / 官方 CLI | none / key / oauth |
+| P1 | 公开网页：直连 HTTP / Jina Reader / OpenCLI 公开命令 | none / 可选 key |
+| P2 | 第三方搜索/采集引擎：Tavily / Brave / Firecrawl / Bright Data | key / quota |
+| P3 | bsk UI 回退：`deep-reach bsk`（守卫版） | public / login |
 
 ## 先看能力
 
@@ -114,7 +116,9 @@ Agent 应该 branch `ok` 和 `error.code`，不要解析底层文本。`tier` �
 | `KEY_MISSING` | key 缺失 | 告诉用户可选填 key，或使用 fallback |
 | `RATE_LIMITED` | 平台限流 | 停止本次动作并冷却渠道 1 小时；不要换后端、换账号或循环重试 |
 | `PLATFORM_BLOCKED` | 验证码/风控 | 停止自动化，让用户手动完成 |
-| `WRITE_BLOCKED` | 写操作被拦截 | 这是预期行为；Deep-Reach 只读 |
+| `WRITE_BLOCKED` | 该后端不支持这个写操作 | 换一个支持写的动作，或走 P3 bsk；写操作需确认用户意图 |
+| `NEED_UI` | 自动后端无法完成 | 用 `deep-reach bsk ...` 回退；不要直接 fetch 站点内部接口 |
+| `POLICY_BLOCKED` | bsk 守卫拦截 | 改用 observe/click/extract/network 读取，不要 fetch/XHR 或 replay |
 | `NOT_FOUND` | 内容不存在 | 检查 URL/ID |
 | `BAD_INPUT` | 参数错误 | 运行 `deep-reach <channel> <action> --help` |
 | `TIMEOUT` | 超时 | 稍后重试，不要循环 |
@@ -123,7 +127,7 @@ Agent 应该 branch `ok` 和 `error.code`，不要解析底层文本。`tier` �
 
 ## 规则
 
-- **只读**：不要尝试发帖、评论、点赞、私信、关注。
+- **写操作**：可以写，但必须先确认用户意图；P3 bsk 可写；未经确认不要发帖、评论、点赞、私信、关注。
 - **不碰凭据**：不要索要密码、Cookie、token；让用户自己在浏览器登录或填 key。
 - **不编造**：结果来自 `items`；搜索摘要不能当全文。
 - **不承诺完整评论树**：`comments` 动作返回的是已加载/可见范围。

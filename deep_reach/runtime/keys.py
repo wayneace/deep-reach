@@ -42,7 +42,7 @@ def template_path() -> Path:
 
 
 class Keys:
-    """A read-only view over keys.yaml plus optional environment overrides."""
+    """An immutable view over keys.yaml plus optional environment overrides."""
 
     def __init__(self, data: Optional[dict] = None, path: Optional[Path] = None):
         self.data = data or {}

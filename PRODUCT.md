@@ -5,9 +5,9 @@
 
 ## 一句话
 
-给 AI agent 一个**只读、免费优先、按层降级**的通用上网入口：先走平台原生免费接口，再走 OpenCLI 浏览器登录态，最后才用第三方采集服务。
+给 AI agent 一个**免费优先、按层降级、可读可写**的通用上网入口：先走官方免费接口，再走公开网页 / OpenCLI 公开命令，再用第三方采集服务，登录态和写操作走 bsk UI 回退。
 
-产品调研（社媒、Amazon、众筹、专利/版权）是第一个被完整验证的垂直；其他网站默认只依赖 OpenCLI 或 P2 采集，不单独写适配器。
+产品调研（社媒、Amazon、众筹、专利/版权）是第一个被完整验证的垂直；其他网站默认只依赖公开网页、P2 采集或 bsk 回退，不单独写适配器。
 
 ## 用户与任务
 
@@ -26,28 +26,31 @@
 3. **众筹验证**：Indiegogo / Kickstarter 上的新品、价格带、卖点。
 4. **专利/版权**：USPTO、EPO、Google Patents、版权登记，做侵权和差异化判断。
 
-## 核心：P0 / P1 / P2 分层
+## 核心：P0 / P1 / P2 / P3 分层
 
 每个 Action 的后端按层排序，注册表强制排序，YAML 写反了也不会改变顺序。
 
 | 层 | 含义 | 凭证 | 典型后端 |
 |---|---|---|---|
-| **P0** | 平台原生免费接口：官方 API 免费层、公开 JSON、原生 CLI | 可选 key / 可选登录 | B站公开 API、腾讯行情、YouTube Data API、直连 HTTP、GitHub / eBay / Etsy / USPTO / EPO |
-| **P1** | OpenCLI 浏览器桥，复用已连接 Chrome 的登录态 | 可选登录 | 微博、X、Reddit、小红书、知乎、抖音、Amazon、雪球 |
-| **P2** | 第三方阅读/采集服务 | 可选 key | Jina Reader、Tavily、Brave、Firecrawl、Bright Data |
+| **P0** | 官方接口：官方 API 免费层、公开 JSON、官方 CLI | none / key / oauth | B站公开 API、腾讯行情、YouTube Data API、GitHub / eBay / Etsy / USPTO / EPO |
+| **P1** | 公开网页：直连 HTTP、Jina Reader、OpenCLI 公开命令 | none / 可选 key | 直连 HTTP、Jina Reader、微博热榜、B站公开搜索、Amazon 公开页 |
+| **P2** | 第三方搜索/采集引擎 | key / quota | Tavily、Brave、Firecrawl、Bright Data |
+| **P3** | bsk UI 回退：agent 驱动，不写站点 recipe | public / login | `deep-reach bsk`（守卫版） |
 
 降级规则：
 
 - 缺 key 只跳过需要 key 的后端，不影响同层其他后端。
-- P0 配额耗尽（`QUOTA_EXHAUSTED`）、限流（`RATE_LIMITED`）、未登录（`NEED_LOGIN`）都**继续尝试下一层**，不直接失败。
+- 登录动作只尝试声明 `supports_login` 的后端；没有登录后端时直接返回 `NEED_UI`。
+- P0 配额耗尽（`QUOTA_EXHAUSTED`）、未登录（`NEED_LOGIN`）都**继续尝试下一层**，不直接失败。
 - 风控/验证码（`PLATFORM_BLOCKED`）、参数错误、404 是终止错误，不继续撞。
-- 全部失败时报告最可行动的错误，例如「登录后可解锁 P1」优先于「P0 配额用完」。
+- 全部失败且动作声明 `ui_fallback` 时返回 `NEED_UI`，由 agent 用 `deep-reach bsk` 接手。
+- P3 守卫只拦截直接 fetch/XHR 站点内部接口和 `debug replay`；bsk 其他能力（含写操作）可用。
 
 ## 产品承诺
 
 1. **一个动词表**：`search`、`read`、`comments`、`product`、`bestsellers`、`quote`。  
    Agent 不需要知道底层是官方 API、OpenCLI 还是阅读器。
-2. **只读**：不发帖、不评论、不点赞、不私信、不关注。
+2. **可读可写**：写操作由动作声明；P3 bsk 可写，但写操作有副作用，必须确认用户意图。
 3. **按层降级**：P0 → P1 → P2，先便宜后昂贵；只使用免费额度/免费 credit，不自动充值。
 4. **没有 key 也能跑**：缺 key / 缺登录只降级对应渠道，不阻塞其他渠道。
 5. **说人话**：错误码之外，必须告诉用户下一步做什么。
@@ -77,7 +80,7 @@
 
 ## 与 Agent-Reach 的关系
 
-Agent-Reach 是同类产品，Deep-Reach 参考它的 Channel / Action / Backend、只读安全、doctor、能力契约和精选渠道。
+Agent-Reach 是同类产品，Deep-Reach 参考它的 Channel / Action / Backend、权限边界、doctor、能力契约和精选渠道。
 
 差异：
 
@@ -111,7 +114,7 @@ Agent-Reach 是同类产品，Deep-Reach 参考它的 Channel / Action / Backend
 - 有 key 后：live 校验 eBay / Etsy / Product Hunt / USPTO / EPO。
 - 有 P2 key 后：live 校验 `web search` 和 `web read` 的 Tavily / Brave / Firecrawl / Bright Data。
 - Indiegogo 不做（Cloudflare 拦截，无公开 API）。
-- 其他站点：不写专属适配器，只走 OpenCLI / P2。
+- 其他站点：不写专属适配器，只走公开网页 / P2 / bsk 回退。
 
 ## 成功标准
 
@@ -119,6 +122,6 @@ Agent-Reach 是同类产品，Deep-Reach 参考它的 Channel / Action / Backend
 - 每个 P0 后端可单独调用，且失败时能自动降层。
 - 第二次同渠道搜索自动等待 10 秒；限流后 1 小时内不再撞该渠道。
 - 缺 key / 缺登录时 `doctor` 能说清楚下一步。
-- 写命令 100% 被只读白名单拦截。
+- P3 bsk 守卫拦截直接内部 API 调用；写操作放行但需确认用户意图。
 - 每个可见渠道都有 capability note。
 - 176 个单元测试 + 1 个 live smoke 脚本。
