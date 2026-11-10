@@ -59,8 +59,16 @@ def main() -> int:
     channels = {
         str(name): (spec or {}) for name, spec in (data.get("channels") or {}).items()
     }
-    if any(str(spec.get("level", "optional")) == "planned" for spec in channels.values()):
-        print(f"{wheel}: planned channels are no longer supported", file=sys.stderr)
+    planned = sorted(
+        name
+        for name, spec in channels.items()
+        if str(spec.get("level", "optional")) == "planned"
+    )
+    if planned:
+        print(
+            f"{wheel}: planned channels are no longer supported: {', '.join(planned)}",
+            file=sys.stderr,
+        )
         return 1
     visible = sorted(channels)
 

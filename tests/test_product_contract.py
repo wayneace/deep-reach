@@ -31,6 +31,9 @@ class ProductContractTest(unittest.TestCase):
         for name in ("roadmap", "kipris", "hackernews"):
             with self.assertRaises(SystemExit):
                 parser.parse_args([name, "search", "x"])
+        for argv in (["channels", "--all"], ["capabilities", "x", "--all"]):
+            with self.assertRaises(SystemExit):
+                parser.parse_args(argv)
 
     def test_parser_builds_channel_action(self):
         registry = load_registry()
@@ -40,6 +43,7 @@ class ProductContractTest(unittest.TestCase):
         self.assertEqual(args.action_name, "search")
         self.assertEqual(args.query, "收纳")
         self.assertEqual(args.limit, 2)
+
 
 if __name__ == "__main__":
     unittest.main()

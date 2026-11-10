@@ -6,7 +6,8 @@
 - `channels` / `capabilities` 移除 `--all` 参数。
 - `doctor` 不再输出 planned 列表和计数。
 - 未实现渠道不再占位；以后直接按 P0 → P1 → P2 → P3 添加。
-- 测试数更新为 253。
+- 自定义 `channels.yaml` 中的 `level: planned` 条目会返回 `CONFIG_ERROR`；请删除占位条目，或实现后再加入。
+- 测试数更新为 255。
 
 ## v0.11.1 — 2026-11-11
 

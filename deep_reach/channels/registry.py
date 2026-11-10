@@ -223,7 +223,7 @@ def _parse(data: dict) -> Registry:
         if channel.level == "planned":
             raise ValueError(
                 f"channel {channel_name!r}: level 'planned' is no longer supported; "
-                "add the channel when it is implemented"
+                "remove the placeholder entry, or implement the channel before adding it"
             )
         visible[channel_name] = channel
     return Registry(channels=visible)

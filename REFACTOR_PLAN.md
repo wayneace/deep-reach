@@ -48,7 +48,7 @@ deep_reach/
 ```bash
 deep-reach doctor
 deep-reach tiers
-deep-reach channels [--all]
+deep-reach channels
 deep-reach capabilities [channel]
 deep-reach setup
 deep-reach profile status|set|launch

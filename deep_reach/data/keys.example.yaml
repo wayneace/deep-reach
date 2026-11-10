@@ -37,13 +37,6 @@ official:
     consumer_key: ""     # 缺失 → OPS 禁用；免费 4GB/周
     consumer_secret: ""  # 与 consumer_key 同时需要
 
-  kipris:
-    api_key: ""          # 缺失 → 禁用，走 Google Patents/网页
-
-  euipo:
-    client_id: ""
-    client_secret: ""    # 缺失 → 禁用，走网页
-
 xueqiu:
   cookie: ""             # 可选；从已登录 xueqiu.com 浏览器复制 Cookie，通常几小时过期
                          # 缺失 → hot/hot_stocks 走 bsk UI 回退；quote/search 优先腾讯公开接口

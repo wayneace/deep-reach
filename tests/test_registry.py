@@ -62,6 +62,13 @@ class RegistryAccessModelTest(unittest.TestCase):
         self.assertEqual(ctx.exception.code, CONFIG_ERROR)
         self.assertIn("p3", ctx.exception.message)
 
+    def test_planned_level_is_a_config_error(self):
+        with self.assertRaises(ReachError) as ctx:
+            self._registry(DEMO.replace("level: default", "level: planned"))
+        self.assertEqual(ctx.exception.code, CONFIG_ERROR)
+        self.assertIn("planned", ctx.exception.message)
+        self.assertIn("no longer supported", ctx.exception.message)
+
     def test_unknown_backend_risk_is_a_config_error(self):
         with self.assertRaises(ReachError) as ctx:
             self._registry(DEMO.replace("risk: high}", "risk: extreme}"))
