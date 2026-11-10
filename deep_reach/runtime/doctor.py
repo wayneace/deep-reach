@@ -94,10 +94,6 @@ def build_doctor_report(
             }
         )
 
-    planned = [
-        {"name": c.name, "description": c.description, "next_action": c.next_action}
-        for c in registry.planned.values()
-    ]
     tier_counts = {
         tier: sum(1 for row in rows if tier in row["tiers"])
         for tier in TIERS
@@ -113,7 +109,6 @@ def build_doctor_report(
         "needs_login": sum(1 for r in rows if r["status"] == "needs_login"),
         "needs_key": sum(1 for r in rows if r["status"] == "needs_key"),
         "experimental": sum(1 for r in rows if r["status"] == "experimental"),
-        "planned": len(planned),
         "runnable": sum(1 for r in rows if r["runnable"]),
         "tiers": tier_counts,
     }
@@ -144,7 +139,6 @@ def build_doctor_report(
         "state": health.report(),
         "quota": quota.report(),
         "channels": rows,
-        "planned": planned,
         "summary": summary,
     }
 
@@ -227,10 +221,6 @@ def format_doctor_text(report: dict) -> str:
                 lines.append(f"      → {row['next_action']}")
         lines.append("")
 
-    if report.get("planned"):
-        lines.append(f"PLANNED: {len(report['planned'])} channels (run `deep-reach roadmap`)")
-        lines.append("")
-
     summary = report.get("summary", {})
     tiers = summary.get("tiers") or {}
     lines.append(
@@ -242,7 +232,6 @@ def format_doctor_text(report: dict) -> str:
         f"{summary.get('needs_login', 0)} need login; "
         f"{summary.get('needs_key', 0)} need key; "
         f"{summary.get('experimental', 0)} experimental; "
-        f"{summary.get('planned', 0)} planned; "
         f"{summary.get('runnable', 0)} runnable now"
     )
     lines.append(

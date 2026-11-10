@@ -153,9 +153,7 @@ def channel_availability(channel: Channel, env: Environment) -> ChannelAvailabil
     bsk_only = _bsk_only(channel)
     declared = channel.status
 
-    if declared == "planned":
-        status = "planned"
-    elif bsk_only:
+    if bsk_only:
         # Manual bsk fallback dominates the remaining declared statuses.
         status = "fallback" if env.bsk_installed else "needs_setup"
     elif declared == "needs_key":

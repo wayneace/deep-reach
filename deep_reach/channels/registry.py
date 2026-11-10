@@ -60,7 +60,6 @@ _BUILTIN: dict[str, Any] = {
 @dataclass
 class Registry:
     channels: dict[str, Channel]
-    planned: dict[str, Channel]
     source_path: Optional[Path] = None
 
     @property
@@ -68,12 +67,7 @@ class Registry:
         return self.channels
 
     def get(self, name: str) -> Optional[Channel]:
-        return self.channels.get(name) or self.planned.get(name)
-
-    def all(self) -> dict[str, Channel]:
-        merged = dict(self.channels)
-        merged.update(self.planned)
-        return merged
+        return self.channels.get(name)
 
 
 def _channels_path() -> Optional[Path]:
@@ -184,7 +178,6 @@ def _backend(value: Any, action_name: str) -> BackendSpec:
 
 def _parse(data: dict) -> Registry:
     visible: dict[str, Channel] = {}
-    planned: dict[str, Channel] = {}
     for name, spec in (data.get("channels") or {}).items():
         channel_name = str(name)
         actions: list[Action] = []
@@ -228,10 +221,12 @@ def _parse(data: dict) -> Registry:
             next_action=str(spec.get("next_action", "")),
         )
         if channel.level == "planned":
-            planned[channel_name] = channel
-        else:
-            visible[channel_name] = channel
-    return Registry(channels=visible, planned=planned)
+            raise ValueError(
+                f"channel {channel_name!r}: level 'planned' is no longer supported; "
+                "add the channel when it is implemented"
+            )
+        visible[channel_name] = channel
+    return Registry(channels=visible)
 
 
 def load_registry() -> Registry:
@@ -254,5 +249,5 @@ def load_registry() -> Registry:
 
 
 def load_channels() -> dict[str, Channel]:
-    """Backward-compatible helper: all channels, including planned."""
-    return load_registry().all()
+    """Backward-compatible helper: all visible channels."""
+    return load_registry().visible

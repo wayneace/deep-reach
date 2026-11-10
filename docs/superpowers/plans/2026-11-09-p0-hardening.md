@@ -438,7 +438,7 @@ recursive-include scripts *.py
 Update `scripts/check_wheel.py`:
 - Add `KEYS_TEMPLATE_SUFFIX = "deep_reach/data/keys.example.yaml"`.
 - Inside the `ZipFile` block, assert exactly one match and `yaml.safe_load` it.
-- Print `21 visible + 7 planned channels + keys template packaged`.
+- Print `21 visible channels + keys template packaged`.
 
 Update `cli.cmd_setup`:
 - `from importlib import resources`.

@@ -19,16 +19,18 @@ class ProductContractTest(unittest.TestCase):
                     f"{channel.name}/{action.name}",
                 )
 
-    def test_planned_channels_are_not_visible(self):
+    def test_registry_has_no_planned_bucket(self):
         registry = load_registry()
-        for channel in registry.planned.values():
-            self.assertEqual(channel.level, "planned")
-            self.assertNotIn(channel.name, registry.visible)
+        self.assertFalse(hasattr(registry, "planned"))
+        self.assertTrue(registry.visible)
+        for channel in registry.visible.values():
+            self.assertNotEqual(channel.level, "planned", channel.name)
 
-    def test_deferred_channels_are_not_planned(self):
-        planned = load_registry().planned
-        for name in ("1688", "sellersprite", "tieba", "hupu"):
-            self.assertNotIn(name, planned)
+    def test_parser_rejects_removed_and_unknown_channels(self):
+        parser = build_parser(load_registry())
+        for name in ("roadmap", "kipris", "hackernews"):
+            with self.assertRaises(SystemExit):
+                parser.parse_args([name, "search", "x"])
 
     def test_parser_builds_channel_action(self):
         registry = load_registry()
@@ -38,13 +40,6 @@ class ProductContractTest(unittest.TestCase):
         self.assertEqual(args.action_name, "search")
         self.assertEqual(args.query, "收纳")
         self.assertEqual(args.limit, 2)
-
-    def test_parser_has_no_planned_channel(self):
-        registry = load_registry()
-        parser = build_parser(registry)
-        with self.assertRaises(SystemExit):
-            parser.parse_args(["kipris", "search", "x"])
-
 
 if __name__ == "__main__":
     unittest.main()

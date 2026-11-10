@@ -4,9 +4,8 @@
 #   default      = 装好就能跑
 #   optional     = 需要登录或免费 key
 #   experimental = 可能不稳定
-#   planned      = 只在 roadmap 出现，不伪装成可用
 #
-# status: ready | needs_login | needs_key | experimental | planned
+# status: ready | needs_login | needs_key | experimental
 # action.requires: none | login | key
 #
 # backend.tier (default p1); the registry always sorts p0 → p1 → p2:
@@ -639,34 +638,3 @@ channels:
         params: [target]
         backends:
           - {label: epo-ops, tier: p0, requires_key: true, keys: [official.epo.consumer_key, official.epo.consumer_secret]}
-
-  # ── planned: roadmap only ───────────────────────────────
-  kipris:
-    level: planned
-    status: planned
-    category: patent
-    description: KIPRIS Plus
-    next_action: 后续版本
-    key: official.kipris.api_key
-    requires_key: true
-    actions: {}
-
-  euipo:
-    level: planned
-    status: planned
-    category: patent
-    description: EUIPO
-    next_action: 后续版本
-    key: official.euipo.client_id
-    requires_key: true
-    actions: {}
-
-  hackernews:
-    level: planned
-    status: planned
-    category: social
-    description: Hacker News Algolia
-    next_action: 后续版本
-    key: null
-    requires_key: false
-    actions: {}

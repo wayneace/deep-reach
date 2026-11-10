@@ -15,7 +15,7 @@ class CapabilitiesOutputTest(unittest.TestCase):
         buffer = io.StringIO()
         with redirect_stdout(buffer):
             code = cmd_capabilities(
-                argparse.Namespace(channel="xiaohongshu", all=False, json=True)
+                argparse.Namespace(channel="xiaohongshu", json=True)
             )
         self.assertEqual(code, 0)
         payload = json.loads(buffer.getvalue())
@@ -29,7 +29,7 @@ class CapabilitiesOutputTest(unittest.TestCase):
         buffer = io.StringIO()
         with redirect_stdout(buffer):
             code = cmd_capabilities(
-                argparse.Namespace(channel="xiaohongshu", all=False, json=False)
+                argparse.Namespace(channel="xiaohongshu", json=False)
             )
         self.assertEqual(code, 0)
         text = buffer.getvalue()
@@ -49,13 +49,13 @@ class CapabilitiesOutputTest(unittest.TestCase):
                 ),
             ),
         )
-        registry = Registry(channels={"demo": channel}, planned={})
+        registry = Registry(channels={"demo": channel})
         with mock.patch("deep_reach.cli.load_registry", return_value=registry):
             json_buffer = io.StringIO()
             with redirect_stdout(json_buffer):
                 self.assertEqual(
                     cmd_capabilities(
-                        argparse.Namespace(channel="demo", all=False, json=True)
+                        argparse.Namespace(channel="demo", json=True)
                     ),
                     0,
                 )
@@ -63,7 +63,7 @@ class CapabilitiesOutputTest(unittest.TestCase):
             with redirect_stdout(text_buffer):
                 self.assertEqual(
                     cmd_capabilities(
-                        argparse.Namespace(channel="demo", all=False, json=False)
+                        argparse.Namespace(channel="demo", json=False)
                     ),
                     0,
                 )

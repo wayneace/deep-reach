@@ -95,8 +95,8 @@ class Channel:
     key_path: Optional[str] = None
     requires_key: bool = False
     description: str = ""
-    level: str = "optional"  # default | optional | experimental | planned
-    status: str = "ready"  # ready | needs_login | needs_key | experimental | planned
+    level: str = "optional"  # default | optional | experimental
+    status: str = "ready"  # ready | needs_login | needs_key | experimental
     limits: str = ""
     not_supported: tuple[str, ...] = ()
     next_action: str = ""

@@ -216,7 +216,7 @@ def cmd_channels(args: argparse.Namespace) -> int:
         print(f"CONFIG_ERROR: {exc.message}", file=sys.stderr)
         return 2
     env = detect_environment(keys)
-    channels = registry.all() if args.all else registry.visible
+    channels = registry.visible
     if args.json:
         rows = []
         for channel in channels.values():
@@ -257,7 +257,7 @@ def cmd_channels(args: argparse.Namespace) -> int:
         _print_json({"channels": rows}, pretty=True)
         return 0
 
-    for level in ("default", "optional", "experimental", "planned"):
+    for level in ("default", "optional", "experimental"):
         rows = [c for c in channels.values() if c.level == level]
         if not rows:
             continue
@@ -291,7 +291,7 @@ def cmd_capabilities(args: argparse.Namespace) -> int:
     except ReachError as exc:
         print(f"CONFIG_ERROR: {exc.message}", file=sys.stderr)
         return 2
-    channels = registry.all() if args.all else registry.visible
+    channels = registry.visible
     if args.channel:
         channel = registry.get(args.channel)
         if channel is None:
@@ -351,31 +351,6 @@ def cmd_capabilities(args: argparse.Namespace) -> int:
         if channel.not_supported:
             print(f"  not supported: {', '.join(channel.not_supported)}")
         print()
-    return 0
-
-
-def cmd_roadmap(args: argparse.Namespace) -> int:
-    try:
-        registry = load_registry()
-    except ReachError as exc:
-        print(f"CONFIG_ERROR: {exc.message}", file=sys.stderr)
-        return 2
-    if args.json:
-        _print_json(
-            {
-                "planned": [
-                    {"name": c.name, "description": c.description, "next_action": c.next_action}
-                    for c in registry.planned.values()
-                ]
-            },
-            pretty=True,
-        )
-        return 0
-    print("ROADMAP (not available yet)")
-    for channel in sorted(registry.planned.values(), key=lambda c: c.name):
-        print(f"  {channel.name:<14} {channel.description}")
-        if channel.next_action:
-            print(f"      → {channel.next_action}")
     return 0
 
 
@@ -731,19 +706,13 @@ def build_parser(registry) -> argparse.ArgumentParser:
     doctor.set_defaults(func=cmd_doctor)
 
     channels = sub.add_parser("channels", help="list available channels")
-    channels.add_argument("--all", action="store_true", help="include planned channels")
     channels.add_argument("--json", action="store_true")
     channels.set_defaults(func=cmd_channels)
 
     capabilities = sub.add_parser("capabilities", help="channel capability contract")
     capabilities.add_argument("channel", nargs="?")
-    capabilities.add_argument("--all", action="store_true")
     capabilities.add_argument("--json", action="store_true")
     capabilities.set_defaults(func=cmd_capabilities)
-
-    roadmap = sub.add_parser("roadmap", help="planned channels")
-    roadmap.add_argument("--json", action="store_true")
-    roadmap.set_defaults(func=cmd_roadmap)
 
     tiers = sub.add_parser("tiers", help="show the P0/P1/P2 ladder and coverage")
     tiers.add_argument("--json", action="store_true")

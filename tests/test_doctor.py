@@ -47,7 +47,7 @@ class DoctorTest(unittest.TestCase):
         self.assertIn("subtitle", rows["bilibili"]["next_action"])
         self.assertEqual(rows["x"]["status"], "fallback")
         self.assertTrue(rows["x"]["next_action"])
-        self.assertIn("planned", report["summary"])
+        self.assertNotIn("planned", report["summary"])
         self.assertFalse(report["opencli"]["missing"])
 
     def test_doctor_text_mentions_next_action(self):
@@ -55,6 +55,7 @@ class DoctorTest(unittest.TestCase):
         text = format_doctor_text(build_doctor_report(registry, Keys({}), client=FakeClient()))
         self.assertIn("deep-reach doctor", text)
         self.assertIn("fallback", text)
+        self.assertNotIn("PLANNED", text)
         self.assertIn("→", text)
 
     def test_bsk_current_profile_and_warning_are_reported(self):

@@ -59,12 +59,10 @@ def main() -> int:
     channels = {
         str(name): (spec or {}) for name, spec in (data.get("channels") or {}).items()
     }
-    visible = sorted(
-        name
-        for name, spec in channels.items()
-        if str(spec.get("level", "optional")) != "planned"
-    )
-    planned = sorted(set(channels) - set(visible))
+    if any(str(spec.get("level", "optional")) == "planned" for spec in channels.values()):
+        print(f"{wheel}: planned channels are no longer supported", file=sys.stderr)
+        return 1
+    visible = sorted(channels)
 
     if len(visible) != EXPECTED_VISIBLE:
         print(
@@ -74,10 +72,7 @@ def main() -> int:
         )
         return 1
 
-    print(
-        f"{wheel}: {len(visible)} visible + {len(planned)} planned channels "
-        "+ keys template packaged"
-    )
+    print(f"{wheel}: {len(visible)} visible channels + keys template packaged")
     return 0
 
 

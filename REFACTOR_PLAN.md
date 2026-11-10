@@ -54,7 +54,6 @@ deep-reach setup
 deep-reach profile status|set|launch
 deep-reach update
 deep-reach uninstall --dry-run
-deep-reach roadmap
 
 deep-reach bilibili search "收纳" --limit 5
 deep-reach youtube search "desk organizer" --limit 5
@@ -77,9 +76,7 @@ deep-reach x search "AI" --limit 5
 - `default`：装好就能跑（B站、YouTube、微博 hot、雪球、Amazon、web）。
 - `optional`：需要登录或免费 key（X、Reddit、小红书、知乎、抖音）。
 - `experimental`：可能不稳定（Product Hunt、Kickstarter、CNIPA、版权）。
-- `planned`：只在 `roadmap` 出现，不伪装成可用（GitHub、eBay、Etsy、Indiegogo、USPTO、EPO 等）。
 
-`channels` 默认只显示前三类；`roadmap` 显示 planned。
 
 ## 5. Doctor
 
@@ -111,7 +108,7 @@ deep-reach x search "AI" --limit 5
 ## 8. 测试与发布
 
 - 单元测试：registry、CLI parser、doctor、profile、opencli compat、dispatch。
-- 产品契约测试：每个 visible channel 至少一个 action；planned 不出现在 `channels`；每个 visible channel 有 capability。
+- 产品契约测试：每个 visible channel 至少一个 action；每个 visible channel 有 capability。
 - Live smoke：`scripts/smoke.py`，覆盖 default 渠道；optional 渠道按登录状态跳过并标注。
 - Release：版本号、CHANGELOG、`deep-reach doctor` 自检。
 
@@ -127,7 +124,7 @@ deep-reach x search "AI" --limit 5
 ### R1 — CLI 产品化
 
 - [x] 动态 `<channel> <action>` 子命令
-- [x] `channels` / `capabilities` / `roadmap`
+- [x] `channels` / `capabilities`
 - [x] 一行 JSON + `--text`
 
 ### R2 — Doctor / Profile / Setup

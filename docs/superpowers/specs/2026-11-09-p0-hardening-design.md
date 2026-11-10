@@ -30,7 +30,7 @@ EPO 的 `Range` 原以为是 header，核对 EPO 官方 FAQ 后确认官方写�
 
 - 保留 `status` 字段名，值改为环境实测状态；新增 `declared_status` 保存注册表原值。
 - 新增 `runnable`、`available_actions`、`unavailable_actions`（含原因）。
-- 状态集合：`ready` / `degraded` / `needs_setup` / `needs_login` / `needs_key` / `experimental` / `planned`。
+- 状态集合：`ready` / `degraded` / `needs_setup` / `needs_login` / `needs_key` / `experimental`。
 - 判定规则：
   - 每个 action：至少一个 backend 当前可用才算可用。
   - backend 可用：`requires_key` 的 key 存在；`opencli-*` 的 OpenCLI 可用。
@@ -41,7 +41,7 @@ EPO 的 `Range` 原以为是 header，核对 EPO 官方 FAQ 后确认官方写�
 - OpenCLI 可用性：
   - `doctor`：用 `profile_status().connected` 精确判断。
   - `channels`：只检查是否安装（`shutil.which` / `DEEP_REACH_OPENCLI_BIN`），不启动子进程；已安装但浏览器未连接时乐观视为可用，并在文档中说明 `doctor` 才是精确检查。
-- `capabilities` / `roadmap` 保持注册表语义，不做环境探测。
+- `capabilities` 保持注册表语义，不做环境探测。
 
 ### 2. URL 防护（用户选择：scheme + 私有地址）
 

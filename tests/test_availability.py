@@ -127,12 +127,6 @@ class AvailabilityTest(unittest.TestCase):
         self.assertEqual(result.status, "needs_setup")
         self.assertFalse(result.runnable)
 
-    def test_bsk_only_planned_channel_stays_planned(self):
-        ch = bsk_only_channel()
-        ch.status = "planned"
-        result = channel_availability(ch, env(installed=False, bsk=True))
-        self.assertEqual(result.status, "planned")
-
     def test_next_action_for_fallback_mentions_bsk(self):
         ch = bsk_only_channel()
         environment = env(installed=False, bsk=True)

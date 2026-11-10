@@ -18,7 +18,7 @@ class ChannelsJsonTest(unittest.TestCase):
         ), mock.patch.dict("os.environ", {"DEEP_REACH_OPENCLI_BIN": ""}):
             buffer = io.StringIO()
             with redirect_stdout(buffer):
-                code = cmd_channels(argparse.Namespace(all=False, json=True))
+                code = cmd_channels(argparse.Namespace(json=True))
 
         self.assertEqual(code, 0)
         payload = json.loads(buffer.getvalue())
@@ -36,7 +36,7 @@ class ChannelsJsonTest(unittest.TestCase):
         ), mock.patch.dict("os.environ", {"DEEP_REACH_OPENCLI_BIN": ""}):
             buffer = io.StringIO()
             with redirect_stdout(buffer):
-                code = cmd_channels(argparse.Namespace(all=False, json=True))
+                code = cmd_channels(argparse.Namespace(json=True))
 
         self.assertEqual(code, 0)
         payload = json.loads(buffer.getvalue())
@@ -61,7 +61,7 @@ class ChannelsJsonTest(unittest.TestCase):
         ), mock.patch.dict("os.environ", {"DEEP_REACH_OPENCLI_BIN": ""}):
             buffer = io.StringIO()
             with redirect_stdout(buffer):
-                code = cmd_channels(argparse.Namespace(all=False, json=False))
+                code = cmd_channels(argparse.Namespace(json=False))
 
         self.assertEqual(code, 0)
         line = next(
@@ -79,7 +79,7 @@ class ChannelsJsonTest(unittest.TestCase):
         ), mock.patch.dict("os.environ", {"DEEP_REACH_OPENCLI_BIN": ""}):
             buffer = io.StringIO()
             with redirect_stdout(buffer):
-                code = cmd_channels(argparse.Namespace(all=False, json=False))
+                code = cmd_channels(argparse.Namespace(json=False))
 
         self.assertEqual(code, 0)
         line = next(
@@ -99,7 +99,7 @@ class ChannelsJsonTest(unittest.TestCase):
         ), mock.patch.dict("os.environ", {"DEEP_REACH_OPENCLI_BIN": ""}):
             buffer = io.StringIO()
             with redirect_stdout(buffer):
-                code = cmd_channels(argparse.Namespace(all=False, json=True))
+                code = cmd_channels(argparse.Namespace(json=True))
 
         self.assertEqual(code, 0)
         payload = json.loads(buffer.getvalue())

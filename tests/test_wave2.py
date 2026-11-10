@@ -135,7 +135,7 @@ class Wave2RegistryTest(unittest.TestCase):
             channel = registry.visible[name]
             self.assertEqual(channel.status, "needs_key")
             self.assertIn("p0", channel.tiers)
-        self.assertNotIn("indiegogo", registry.all())
+        self.assertNotIn("indiegogo", registry.visible)
 
 
 if __name__ == "__main__":

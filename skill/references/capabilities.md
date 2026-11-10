@@ -97,9 +97,3 @@
 
 - `QUOTA_EXHAUSTED`、`NEED_LOGIN`、`UPSTREAM_BROKEN`、`TIMEOUT`、`NEED_SETUP` 继续下一层。
 - `RATE_LIMITED`、`BUSY`、`PLATFORM_BLOCKED`、`BAD_INPUT`、`NOT_FOUND`、`WRITE_BLOCKED` 终止，不继续撞。
-
-## planned
-
-KIPRIS、EUIPO、Hacker News。
-
-这些渠道尚未实现，`deep-reach channels` 不会显示；`deep-reach roadmap` 可见。

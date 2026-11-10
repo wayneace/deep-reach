@@ -9,7 +9,7 @@
 
 ## 状态
 
-- 版本 **0.11.1**；254 个单元测试。
+- 版本 **0.12.0**；253 个单元测试。
 - 21 个可见渠道，10 个有 P0 覆盖；8 个 default 渠道 live smoke 通过（P0/P1，未含 P3）。
 - `channels` / `doctor` 的 `status` 是**当前环境实测值**（`ready` / `degraded` / `fallback` / `needs_setup` / `needs_login` / `needs_key` / `experimental`）；`declared_status` 保留注册表声明。
 - 可读可写：写操作由动作声明决定；P3 bsk 可执行写操作，调用方需确认用户意图。
@@ -75,14 +75,13 @@ uv run deep-reach tiers --json
 - **按层降级**：原生免费接口 → OpenCLI → 第三方阅读器；不调用付费 API。
 - **没有 key 也能跑**：缺 key / 缺登录只降级对应渠道。
 - **说人话**：错误码之外，`doctor` 告诉你下一步。
-- **列出的渠道必须能用**：没实现的只出现在 `roadmap`。
+- **列出的渠道必须能用**：未实现的渠道不出现在 CLI 中。
 - **本地优先**：配置、状态、浏览器 profile 都在本机。
 
 ## 渠道分级
 
 ```bash
 uv run deep-reach channels      # 默认显示已实现渠道；每行 status 是当前环境实测值
-uv run deep-reach roadmap       # 尚未实现的渠道
 uv run deep-reach capabilities  # 每个渠道能做什么、不能做什么
 ```
 
@@ -91,7 +90,6 @@ uv run deep-reach capabilities  # 每个渠道能做什么、不能做什么
 | `default` | 装好就能跑：B站、YouTube、微博 hot、雪球、Amazon、web、GitHub、V2EX |
 | `optional` | 需要登录或免费 key：X、Reddit、小红书、知乎、抖音、eBay、Etsy、USPTO、EPO |
 | `experimental` | 可能不稳定：Product Hunt、Kickstarter、CNIPA、版权 |
-| `planned` | 只在 roadmap：KIPRIS、EUIPO、Hacker News |
 
 ## 常用命令
 
