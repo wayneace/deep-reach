@@ -13,7 +13,15 @@ from typing import Any, Optional
 
 import yaml
 
-from .base import TIER_ORDER, Action, BackendSpec, Channel, Param
+from .base import (
+    BACKEND_TIERS,
+    RISK_LEVELS,
+    TIER_ORDER,
+    Action,
+    BackendSpec,
+    Channel,
+    Param,
+)
 
 _BUILTIN: dict[str, Any] = {
     "channels": {
@@ -119,9 +127,19 @@ def _backend(value: Any, action_name: str) -> BackendSpec:
     if isinstance(value, dict):
         label = str(value["label"])
         tier = str(value.get("tier", "p1")).lower()
-        if tier not in TIER_ORDER:
+        if tier == "p3":
+            raise ValueError(
+                f"backend {label!r}: tier 'p3' is reserved for the bsk UI fallback; "
+                "use one of p0, p1, p2"
+            )
+        if tier not in BACKEND_TIERS:
             raise ValueError(
                 f"backend {label!r}: unknown tier {tier!r}; use one of p0, p1, p2"
+            )
+        risk = str(value.get("risk", "low")).lower()
+        if risk not in RISK_LEVELS:
+            raise ValueError(
+                f"backend {label!r}: unknown risk {risk!r}; use one of low, medium, high"
             )
         key = value.get("key")
         raw_keys = value.get("keys")
@@ -138,7 +156,17 @@ def _backend(value: Any, action_name: str) -> BackendSpec:
         options = {
             field: val
             for field, val in value.items()
-            if field not in {"label", "method", "requires_key", "tier", "key", "keys"}
+            if field
+            not in {
+                "label",
+                "method",
+                "requires_key",
+                "tier",
+                "key",
+                "keys",
+                "supports_login",
+                "risk",
+            }
         }
         return BackendSpec(
             label=label,
@@ -148,6 +176,8 @@ def _backend(value: Any, action_name: str) -> BackendSpec:
             tier=tier,
             options=options,
             keys=keys,
+            supports_login=bool(value.get("supports_login", False)),
+            risk=risk,
         )
     raise ValueError(f"invalid backend entry: {value!r}")
 
@@ -166,6 +196,12 @@ def _parse(data: dict) -> Registry:
                     key=lambda backend: TIER_ORDER[backend.tier],
                 )
             )
+            risk = str(action_spec.get("risk", "")).lower()
+            if risk and risk not in RISK_LEVELS:
+                raise ValueError(
+                    f"action {action_name!r}: unknown risk {risk!r}; "
+                    "use one of low, medium, high"
+                )
             actions.append(
                 Action(
                     name=action_name,
@@ -174,6 +210,8 @@ def _parse(data: dict) -> Registry:
                     timeout=float(action_spec.get("timeout", 30.0)),
                     requires=str(action_spec.get("requires", "none")),
                     description=str(action_spec.get("description", "")),
+                    ui_fallback=bool(action_spec.get("ui_fallback", False)),
+                    risk=risk,
                 )
             )
         channel = Channel(

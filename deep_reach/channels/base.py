@@ -19,19 +19,25 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-TIERS = ("p0", "p1", "p2")
+TIERS = ("p0", "p1", "p2", "p3")
 TIER_ORDER = {tier: index for index, tier in enumerate(TIERS)}
 
+#: p3 is a fallback handoff, not an executable backend tier.
+BACKEND_TIERS = ("p0", "p1", "p2")
+RISK_LEVELS = ("low", "medium", "high")
+
 TIER_LABELS = {
-    "p0": "原生免费接口（官方 API 免费层 / 公开 JSON / CLI）",
-    "p1": "OpenCLI 浏览器桥（复用登录态）",
-    "p2": "第三方阅读/采集服务（Jina / Tavily / Brave / Firecrawl / Bright Data）",
+    "p0": "官方接口（官方 API 免费层 / 公开 JSON / 官方 CLI）",
+    "p1": "公开网页（http-read / Jina / OpenCLI 公开命令）",
+    "p2": "第三方搜索/采集引擎（Tavily / Brave / Firecrawl / Bright Data）",
+    "p3": "bsk UI 回退（agent 驱动，非自动 backend）",
 }
 
 TIER_ACCESS = {
-    "p0": "可选 key / 可选登录",
-    "p1": "可选登录",
-    "p2": "可选 key",
+    "p0": "none / key / oauth",
+    "p1": "none / optional key",
+    "p2": "key / quota",
+    "p3": "public / login（bsk 全能力，含写操作）",
 }
 
 
@@ -52,6 +58,8 @@ class BackendSpec:
     tier: str = "p1"
     options: dict = field(default_factory=dict)
     keys: tuple[str, ...] = ()
+    supports_login: bool = False
+    risk: str = "low"
 
     def required_keys(self, channel: "Channel") -> tuple[Optional[str], ...]:
         """Every key path this backend needs; falls back to the legacy single key."""
@@ -67,6 +75,8 @@ class Action:
     timeout: float = 30.0
     requires: str = "none"  # none | login | key
     description: str = ""
+    ui_fallback: bool = False
+    risk: str = ""
 
     @property
     def tiers(self) -> tuple[str, ...]:

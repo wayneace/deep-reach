@@ -5,7 +5,16 @@ from pathlib import Path
 from unittest import mock
 
 from deep_reach.channels import load_registry
-from deep_reach.channels.base import Action, BackendSpec, Channel, Param
+from deep_reach.channels.base import (
+    TIER_ACCESS,
+    TIER_LABELS,
+    TIER_ORDER,
+    TIERS,
+    Action,
+    BackendSpec,
+    Channel,
+    Param,
+)
 from deep_reach.runtime.dispatch import BACKENDS, run_action
 from deep_reach.runtime.keys import Keys
 from deep_reach.runtime.result import (
@@ -146,6 +155,17 @@ class TierFallbackTest(unittest.TestCase):
         env = run_action(channel, "search", {"query": "x"}, keys=Keys({}))
         self.assertTrue(env["ok"])
         self.assertEqual(env["backend"], "p0")
+
+
+class TierModelTest(unittest.TestCase):
+    def test_p3_is_the_last_tier(self):
+        self.assertEqual(TIERS, ("p0", "p1", "p2", "p3"))
+        self.assertEqual(TIER_ORDER["p3"], 3)
+
+    def test_p3_has_a_label_and_access_text(self):
+        self.assertIn("UI", TIER_LABELS["p3"])
+        self.assertIn("bsk", TIER_LABELS["p3"])
+        self.assertIn("public", TIER_ACCESS["p3"].lower())
 
 
 if __name__ == "__main__":
