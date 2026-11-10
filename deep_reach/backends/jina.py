@@ -6,8 +6,6 @@ scraper; it cannot bypass login walls.
 
 from __future__ import annotations
 
-import urllib.error
-import urllib.request
 from typing import Optional
 
 from ..runtime.dispatch import BACKENDS
@@ -15,11 +13,10 @@ from ..runtime.result import (
     NEED_SETUP,
     QUOTA_EXHAUSTED,
     TIMEOUT,
-    UPSTREAM_BROKEN,
     ReachError,
     make_item,
 )
-from .http import validate_url
+from .http import fetch, validate_url
 
 BASE = "https://r.jina.ai"
 
@@ -36,24 +33,31 @@ class JinaReader:
         }
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
-        request = urllib.request.Request(f"{self.base}/{url}", headers=headers)
         try:
-            with urllib.request.urlopen(request, timeout=timeout) as response:
-                return response.read().decode("utf-8", errors="replace")
-        except urllib.error.HTTPError as exc:
-            if exc.code in (401, 403):
+            response = fetch(
+                f"{self.base}/{url}",
+                timeout=timeout,
+                headers=headers,
+                code_map={
+                    401: NEED_SETUP,
+                    403: NEED_SETUP,
+                    429: QUOTA_EXHAUSTED,
+                },
+            )
+        except ReachError as exc:
+            if exc.code == NEED_SETUP:
                 raise ReachError(
-                    NEED_SETUP, "Jina Reader rejected the key; check search.jina.api_key"
-                ) from exc
-            if exc.code == 429:
+                    NEED_SETUP,
+                    "Jina Reader rejected the key; check search.jina.api_key",
+                ) from None
+            if exc.code == QUOTA_EXHAUSTED:
                 raise ReachError(
                     QUOTA_EXHAUSTED, "Jina Reader free-tier limit reached (429)"
-                ) from exc
-            raise ReachError(UPSTREAM_BROKEN, f"Jina Reader HTTP {exc.code}") from exc
-        except urllib.error.URLError as exc:
-            if isinstance(exc.reason, TimeoutError):
-                raise ReachError(TIMEOUT, "Jina Reader timed out") from exc
-            raise ReachError(UPSTREAM_BROKEN, f"Jina Reader network error: {exc.reason}") from exc
+                ) from None
+            if exc.code == TIMEOUT:
+                raise ReachError(TIMEOUT, "Jina Reader timed out") from None
+            raise
+        return response.text
 
 
 def _target_url(channel_name: str, target: str) -> str:

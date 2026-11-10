@@ -31,6 +31,7 @@ from ..runtime.result import (
     UPSTREAM_BROKEN,
     ReachError,
     make_item,
+    sanitize_url,
 )
 
 USER_AGENT = (
@@ -144,17 +145,66 @@ def _ssl_context() -> ssl.SSLContext:
 SSL_CONTEXT = _ssl_context()
 
 
-class _ValidatingRedirectHandler(urllib.request.HTTPRedirectHandler):
-    """Re-validate every redirect target, not just the initial URL."""
+_SENSITIVE_HEADER_RE = re.compile(
+    r"(authorization|cookie|token|secret|key|auth)", re.IGNORECASE
+)
+_SENSITIVE_REDIRECT_QUERY_RE = re.compile(
+    r"^(key|api[_-]?key|token|access_token|secret|password|cookie|"
+    r"auth|signature|sig)$",
+    re.IGNORECASE,
+)
+
+
+def _origin(url: str) -> tuple[str, str, Optional[int]]:
+    parts = urllib.parse.urlsplit(url)
+    scheme = parts.scheme.lower()
+    default_port = 443 if scheme == "https" else 80 if scheme == "http" else None
+    return (scheme, (parts.hostname or "").lower(), parts.port or default_port)
+
+
+def _strip_sensitive_headers(headers: dict) -> dict:
+    return {
+        name: value
+        for name, value in headers.items()
+        if not _SENSITIVE_HEADER_RE.search(name)
+    }
+
+
+def _strip_sensitive_query(url: str) -> str:
+    parts = urllib.parse.urlsplit(url)
+    pairs = urllib.parse.parse_qsl(parts.query, keep_blank_values=True)
+    kept = [
+        (name, value)
+        for name, value in pairs
+        if not _SENSITIVE_REDIRECT_QUERY_RE.match(name)
+    ]
+    if len(kept) == len(pairs):
+        return url
+    return urllib.parse.urlunsplit(
+        parts._replace(query=urllib.parse.urlencode(kept, doseq=True))
+    )
+
+
+class ValidatedRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Validate redirects and strip credentials when the origin changes."""
 
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         validate_url(newurl)
-        return super().redirect_request(req, fp, code, msg, headers, newurl)
+        request = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if request is None:
+            return None
+        if _origin(req.full_url) != _origin(newurl):
+            request.headers = _strip_sensitive_headers(request.headers)
+            request.full_url = _strip_sensitive_query(request.full_url)
+        return request
 
+
+# Compatibility alias for callers/tests that used the private name.
+_ValidatingRedirectHandler = ValidatedRedirectHandler
 
 _OPENER = urllib.request.build_opener(
     urllib.request.HTTPSHandler(context=SSL_CONTEXT),
-    _ValidatingRedirectHandler(),
+    ValidatedRedirectHandler(),
 )
 
 
@@ -273,13 +323,15 @@ def fetch(
     except urllib.error.HTTPError as exc:
         body = exc.read()[:300].decode("utf-8", errors="replace")
         code = (code_map or {}).get(exc.code) or _http_code(exc.code)
-        raise ReachError(code, f"HTTP {exc.code} from {url}: {body}") from exc
+        raise ReachError(
+            code, f"HTTP {exc.code} from {sanitize_url(url)}: {body}"
+        ) from exc
     except urllib.error.URLError as exc:
         reason = str(exc.reason)
         code = TIMEOUT if "timed out" in reason.lower() else UPSTREAM_BROKEN
-        raise ReachError(code, f"cannot reach {url}: {reason}") from exc
+        raise ReachError(code, f"cannot reach {sanitize_url(url)}: {reason}") from exc
     except TimeoutError as exc:
-        raise ReachError(TIMEOUT, f"request timed out: {url}") from exc
+        raise ReachError(TIMEOUT, f"request timed out: {sanitize_url(url)}") from exc
 
 
 def fetch_json(
@@ -307,10 +359,13 @@ def fetch_json(
     try:
         payload = json.loads(response.text)
     except ValueError as exc:
-        raise ReachError(UPSTREAM_BROKEN, f"{url} did not return JSON") from exc
+        raise ReachError(
+            UPSTREAM_BROKEN, f"{sanitize_url(url)} did not return JSON"
+        ) from exc
     if not isinstance(payload, (dict, list)):
         raise ReachError(
-            UPSTREAM_BROKEN, f"{url} returned an unexpected JSON payload"
+            UPSTREAM_BROKEN,
+            f"{sanitize_url(url)} returned an unexpected JSON payload",
         )
     return payload
 

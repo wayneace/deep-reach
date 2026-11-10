@@ -34,7 +34,7 @@ from ..runtime.result import (
     ReachError,
     make_item,
 )
-from .http import SSL_CONTEXT, fetch
+from .http import SSL_CONTEXT, ValidatedRedirectHandler, fetch
 
 COOKIE_KEY = "xueqiu.cookie"
 _UA = (
@@ -118,6 +118,7 @@ class _Session:
         self.opener = urllib.request.build_opener(
             urllib.request.HTTPCookieProcessor(self.jar),
             urllib.request.HTTPSHandler(context=SSL_CONTEXT),
+            ValidatedRedirectHandler(),
         )
         self._cookie = keys.get(COOKIE_KEY)
         self._initialized = False

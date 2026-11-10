@@ -253,9 +253,17 @@ def _youtube_raise(payload: dict, action: str) -> None:
     raise ReachError(UPSTREAM_BROKEN, f"youtube {action}: {message}")
 
 
-def _youtube_get(url: str, params: dict, timeout: float, action: str) -> dict:
+def _youtube_get(
+    url: str,
+    params: dict,
+    timeout: float,
+    action: str,
+    headers: Optional[dict] = None,
+) -> dict:
     try:
-        payload = fetch_json(url, timeout=timeout, params=params)
+        payload = fetch_json(
+            url, timeout=timeout, params=params, headers=headers
+        )
     except ReachError as exc:
         lowered = exc.message.lower()
         if "quota" in lowered:
@@ -287,10 +295,10 @@ def _youtube_search(params: dict, timeout: float, keys: Keys) -> list[dict]:
             "type": "video",
             "q": params["query"],
             "maxResults": limit,
-            "key": keys.get("official.youtube.api_key"),
         },
         timeout,
         "search",
+        headers={"X-Goog-Api-Key": str(keys.get("official.youtube.api_key"))},
     )
     items = []
     for row in payload.get("items") or []:
@@ -319,10 +327,10 @@ def _youtube_read(params: dict, timeout: float, keys: Keys) -> list[dict]:
         {
             "part": "snippet,statistics,contentDetails",
             "id": _youtube_id(str(params["target"])),
-            "key": keys.get("official.youtube.api_key"),
         },
         timeout,
         "read",
+        headers={"X-Goog-Api-Key": str(keys.get("official.youtube.api_key"))},
     )
     items = []
     for row in payload.get("items") or []:

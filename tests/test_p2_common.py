@@ -1,6 +1,4 @@
-import io
 import unittest
-import urllib.error
 from unittest import mock
 
 from deep_reach.backends.jina import JinaReader
@@ -65,15 +63,14 @@ class P2FetchJsonTest(unittest.TestCase):
 
 class JinaRateLimitTest(unittest.TestCase):
     def test_429_is_quota_exhausted(self):
-        error = urllib.error.HTTPError(
-            "https://r.jina.ai/x", 429, "limited", {}, io.BytesIO(b"")
-        )
         with mock.patch(
-            "deep_reach.backends.jina.urllib.request.urlopen", side_effect=error
+            "deep_reach.backends.jina.fetch",
+            side_effect=ReachError(QUOTA_EXHAUSTED, "HTTP 429"),
         ):
             with self.assertRaises(ReachError) as ctx:
                 JinaReader().read("https://example.com")
         self.assertEqual(ctx.exception.code, QUOTA_EXHAUSTED)
+        self.assertIn("free-tier", ctx.exception.message)
 
 
 if __name__ == "__main__":
