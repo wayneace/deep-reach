@@ -31,6 +31,8 @@ class ChannelsJsonTest(unittest.TestCase):
     def test_json_shows_risk_and_ui_fallback(self):
         with mock.patch("deep_reach.cli._load_keys", return_value=Keys({})), mock.patch(
             "deep_reach.runtime.availability.shutil.which", return_value=None
+        ), mock.patch(
+            "deep_reach.runtime.availability.bsk_available", return_value=True
         ), mock.patch.dict("os.environ", {"DEEP_REACH_OPENCLI_BIN": ""}):
             buffer = io.StringIO()
             with redirect_stdout(buffer):
@@ -41,6 +43,7 @@ class ChannelsJsonTest(unittest.TestCase):
         row = next(
             item for item in payload["channels"] if item["name"] == "xiaohongshu"
         )
+        self.assertEqual(row["status"], "fallback")
         self.assertEqual(row["risk"], "high")
         self.assertEqual(
             set(row["ui_fallback_actions"]), {"search", "read", "comments"}
@@ -53,6 +56,8 @@ class ChannelsJsonTest(unittest.TestCase):
     def test_text_shows_risk_and_bsk_suffix(self):
         with mock.patch("deep_reach.cli._load_keys", return_value=Keys({})), mock.patch(
             "deep_reach.runtime.availability.shutil.which", return_value=None
+        ), mock.patch(
+            "deep_reach.runtime.availability.bsk_available", return_value=True
         ), mock.patch.dict("os.environ", {"DEEP_REACH_OPENCLI_BIN": ""}):
             buffer = io.StringIO()
             with redirect_stdout(buffer):
@@ -89,6 +94,8 @@ class ChannelsJsonTest(unittest.TestCase):
         with mock.patch("deep_reach.cli._load_keys", return_value=Keys({})), mock.patch(
             "deep_reach.runtime.availability.shutil.which",
             return_value="/usr/bin/opencli",
+        ), mock.patch(
+            "deep_reach.runtime.availability.bsk_available", return_value=True
         ), mock.patch.dict("os.environ", {"DEEP_REACH_OPENCLI_BIN": ""}):
             buffer = io.StringIO()
             with redirect_stdout(buffer):
@@ -97,7 +104,8 @@ class ChannelsJsonTest(unittest.TestCase):
         self.assertEqual(code, 0)
         payload = json.loads(buffer.getvalue())
         row = next(item for item in payload["channels"] if item["name"] == "x")
-        self.assertEqual(row["status"], "needs_login")
+        self.assertEqual(row["status"], "fallback")
+        self.assertTrue(row["runnable"])
         self.assertIn("deep-reach bsk", row["effective_next_action"])
         self.assertNotIn("OpenCLI", row["effective_next_action"])
         self.assertNotIn("Chrome profile", row["effective_next_action"])

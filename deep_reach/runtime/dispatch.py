@@ -21,6 +21,7 @@ from typing import Callable, Optional
 
 from ..channels.base import Action, Channel
 from . import health
+from .availability import action_risk
 from .clock import Clock
 from .keys import Keys, default_keys_path, template_path
 from .limits import acquire_request, is_browser_backend, pace, query_slot
@@ -166,13 +167,11 @@ def _need_ui(
     action: Action,
     attempts: list[dict],
     elapsed_ms: int,
-    keys: Optional[Keys],
 ) -> dict:
     """Return the bsk UI handoff instead of pretending P3 is an automatic backend."""
-    profile = "main"
-    if keys is not None:
-        profile = str(keys.get("browser.bsk_profile") or "main")
-    risk = action.risk or ("high" if action.requires == "login" else "medium")
+    risk = action_risk(action)
+    if not action.risk and not any(backend.risk for backend in action.backends):
+        risk = "high" if action.requires == "login" else "medium"
     hint = (
         "使用 `deep-reach bsk ...`（守卫版）回退："
         "`deep-reach bsk session start --json` → `navigate` → `observe` → "
@@ -197,7 +196,7 @@ def _need_ui(
         ),
         extra_meta={
             "fallback": "bsk-ui",
-            "profile": profile,
+            "profile": "current",
             "risk": risk,
             "policy": BSK_UI_POLICY,
         },
@@ -247,7 +246,8 @@ def run_action(
             "off",
             "",
         }
-    if action.risk == "high" and not allow_high:
+    effective_risk = action_risk(action)
+    if effective_risk == "high" and not allow_high:
         return envelope(
             channel=channel.name,
             action=action_name,
@@ -259,7 +259,7 @@ def run_action(
             ),
         )
 
-    if action.risk == "high":
+    if effective_risk == "high":
         print(
             f"warning: {channel.name}/{action_name} is high risk; "
             "using the real browser profile may trigger platform risk controls.",
@@ -270,7 +270,7 @@ def run_action(
         spec.supports_login for spec in action.backends
     ):
         if action.ui_fallback:
-            return _need_ui(channel, action, [], elapsed(), keys)
+            return _need_ui(channel, action, [], elapsed())
         return envelope(
             channel=channel.name,
             action=action_name,
@@ -480,7 +480,7 @@ def run_action(
         )
 
     if action.ui_fallback:
-        return _need_ui(channel, action, attempts, elapsed(), keys)
+        return _need_ui(channel, action, attempts, elapsed())
 
     return envelope(
         channel=channel.name,

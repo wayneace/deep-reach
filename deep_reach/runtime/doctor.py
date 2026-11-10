@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import os
-import shutil
 from typing import Optional
 
 from ..backends.opencli import RECOMMENDED_VERSION, OpenCLIClient, version_status
@@ -12,6 +10,7 @@ from ..channels.registry import Registry
 from . import health, quota
 from .availability import (
     OPENCLI_INSTALL_COMMAND,
+    action_risk,
     channel_availability,
     channel_risk,
     environment_from_profile,
@@ -24,10 +23,6 @@ LEVEL_ORDER = ("default", "optional", "experimental")
 BSK_INSTALL_HINT = (
     "https://raw.githubusercontent.com/Tencent/BrowserSkill/main/AGENT_INSTALL.md"
 )
-
-
-def _bsk_installed() -> bool:
-    return bool(os.environ.get("DEEP_REACH_BSK_BIN") or shutil.which("bsk"))
 
 
 def _as_bool(value, default: bool = True) -> bool:
@@ -63,7 +58,6 @@ def build_doctor_report(
 
     profile = client.profile_status()
     env = environment_from_profile(keys, profile)
-    bsk_profile = str(keys.get("browser.bsk_profile") or "main")
     bsk_guard = _as_bool(keys.get("browser.bsk_guard"), True)
     allow_high = _as_bool(keys.get("risk.allow_high"), True)
     rows = []
@@ -91,7 +85,7 @@ def build_doctor_report(
                     a.name: {
                         "requires": a.requires,
                         "tiers": list(a.tiers),
-                        "risk": a.risk or "low",
+                        "risk": action_risk(a),
                         "ui_fallback": a.ui_fallback,
                     }
                     for a in channel.actions
@@ -116,6 +110,7 @@ def build_doctor_report(
         "visible": len(rows),
         "ready": sum(1 for r in rows if r["status"] == "ready"),
         "degraded": sum(1 for r in rows if r["status"] == "degraded"),
+        "fallback": sum(1 for r in rows if r["status"] == "fallback"),
         "needs_setup": sum(1 for r in rows if r["status"] == "needs_setup"),
         "needs_login": sum(1 for r in rows if r["status"] == "needs_login"),
         "needs_key": sum(1 for r in rows if r["status"] == "needs_key"),
@@ -138,8 +133,8 @@ def build_doctor_report(
         "opencli": opencli_version,
         "profile": profile,
         "bsk": {
-            "installed": _bsk_installed(),
-            "profile": bsk_profile,
+            "installed": env.bsk_installed,
+            "profile": "current",
             "guard": bsk_guard,
             "allow_high_risk": allow_high,
             "install": BSK_INSTALL_HINT,
@@ -198,7 +193,7 @@ def format_doctor_text(report: dict) -> str:
     bsk = report.get("bsk") or {}
     bsk_state = "installed" if bsk.get("installed") else "not installed"
     lines.append(
-        f"bsk:      profile {bsk.get('profile', 'main')}; "
+        f"bsk:      profile {bsk.get('profile', 'current')}; "
         f"guard {'on' if bsk.get('guard', True) else 'off'}; {bsk_state}"
     )
     if not bsk.get("installed"):
@@ -244,6 +239,7 @@ def format_doctor_text(report: dict) -> str:
         f"{summary.get('visible', 0)} visible; "
         f"{summary.get('ready', 0)} ready; "
         f"{summary.get('degraded', 0)} degraded; "
+        f"{summary.get('fallback', 0)} fallback; "
         f"{summary.get('needs_setup', 0)} need setup; "
         f"{summary.get('needs_login', 0)} need login; "
         f"{summary.get('needs_key', 0)} need key; "

@@ -17,6 +17,7 @@ import shutil
 from dataclasses import dataclass
 from typing import Optional
 
+from ..backends.bsk_guard import BSK_INSTALL_HINT, bsk_available
 from ..channels.base import Action, BackendSpec, Channel
 from .keys import Keys, default_keys_path, template_path
 
@@ -38,6 +39,7 @@ class Environment:
     keys: Keys
     opencli_installed: bool
     browser_connected: Optional[bool] = None
+    bsk_installed: bool = False
 
     @property
     def opencli_available(self) -> bool:
@@ -69,7 +71,10 @@ def detect_environment(
             connected = False
         installed = installed or bool(connected)
     return Environment(
-        keys=keys, opencli_installed=installed, browser_connected=connected
+        keys=keys,
+        opencli_installed=installed,
+        browser_connected=connected,
+        bsk_installed=bsk_available(),
     )
 
 
@@ -83,7 +88,10 @@ def environment_from_profile(keys: Keys, profile: dict) -> Environment:
         or _opencli_installed()
     )
     return Environment(
-        keys=keys, opencli_installed=installed, browser_connected=connected
+        keys=keys,
+        opencli_installed=installed,
+        browser_connected=connected,
+        bsk_installed=bsk_available(),
     )
 
 
@@ -119,6 +127,13 @@ def action_availability(
     return False, reasons
 
 
+def _bsk_only(channel: Channel) -> bool:
+    """True when every action is a manual bsk handoff and nothing runs automatically."""
+    return bool(channel.actions) and all(
+        action.ui_fallback and not action.backends for action in channel.actions
+    )
+
+
 def channel_availability(channel: Channel, env: Environment) -> ChannelAvailability:
     available: list[str] = []
     unavailable: dict[str, list[str]] = {}
@@ -134,10 +149,13 @@ def channel_availability(channel: Channel, env: Environment) -> ChannelAvailabil
 
     all_ok = bool(channel.actions) and not unavailable
     any_ok = bool(available)
+    bsk_only = _bsk_only(channel)
     declared = channel.status
 
     if declared == "planned":
         status = "planned"
+    elif bsk_only:
+        status = "fallback" if env.bsk_installed else "needs_setup"
     elif declared == "needs_key":
         status = "ready" if all_ok else "needs_key"
     elif declared == "needs_login":
@@ -151,7 +169,7 @@ def channel_availability(channel: Channel, env: Environment) -> ChannelAvailabil
     return ChannelAvailability(
         status=status,
         declared_status=declared,
-        runnable=any_ok,
+        runnable=any_ok or (bsk_only and env.bsk_installed),
         available_actions=tuple(available),
         unavailable_actions=unavailable,
         ui_fallback_actions=tuple(ui_fallback),
@@ -161,27 +179,30 @@ def channel_availability(channel: Channel, env: Environment) -> ChannelAvailabil
 RISK_ORDER = {"low": 0, "medium": 1, "high": 2}
 
 
+def action_risk(action: Action) -> str:
+    """The highest declared risk on an action and its backends."""
+    risks = [action.risk] if action.risk else []
+    risks.extend(backend.risk for backend in action.backends if backend.risk)
+    if not risks:
+        return "low"
+    return max(risks, key=lambda risk: RISK_ORDER.get(risk, 0))
+
+
 def channel_risk(channel: Channel) -> str:
     """The highest declared risk across the channel's actions and backends."""
-    risks = [action.risk for action in channel.actions if action.risk]
-    risks.extend(
-        backend.risk
-        for action in channel.actions
-        for backend in action.backends
-        if backend.risk
-    )
+    risks = [action_risk(action) for action in channel.actions]
     if not risks:
         return "low"
     return max(risks, key=lambda risk: RISK_ORDER.get(risk, 0))
 
 
 def _bsk_hint(actions: tuple[str, ...], env: Optional[Environment]) -> str:
-    profile = "main"
-    if env is not None:
-        profile = str(env.keys.get("browser.bsk_profile") or "main")
+    prefix = ""
+    if env is not None and not env.bsk_installed:
+        prefix = f"安装 bsk（{BSK_INSTALL_HINT}）；"
     return (
-        f"可用 `deep-reach bsk ...` 回退（{', '.join(actions)}；"
-        f"profile: {profile}，高风险；bsk 全能力可用，写操作需确认）"
+        f"{prefix}可用 `deep-reach bsk ...` 回退（{', '.join(actions)}；"
+        "当前浏览器 profile，高风险；bsk 全能力可用，写操作需确认）"
     )
 
 
@@ -194,6 +215,9 @@ def next_action_for(
     status = availability.status
     ui_actions = availability.ui_fallback_actions
     ui_hint = _bsk_hint(ui_actions, env) if ui_actions else ""
+
+    if status == "fallback":
+        return ui_hint or channel.next_action or "用 `deep-reach bsk ...` 手动完成"
 
     if status == "needs_setup":
         has_auto = any(action.backends for action in channel.actions)

@@ -11,7 +11,7 @@ class ConfigExampleTest(unittest.TestCase):
         data = yaml.safe_load(
             (ROOT / "deep_reach/data/keys.example.yaml").read_text(encoding="utf-8")
         )
-        self.assertEqual(data["browser"]["bsk_profile"], "main")
+        self.assertNotIn("bsk_profile", data["browser"])
         self.assertTrue(data["browser"]["bsk_guard"])
         self.assertTrue(data["risk"]["allow_high"])
 

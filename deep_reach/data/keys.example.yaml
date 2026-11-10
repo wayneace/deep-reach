@@ -68,8 +68,8 @@ browser:
   # auto = 自动读取 OpenCLI doctor 里已连接的 Chrome contextId。
   # 也可以填 doctor 输出的 contextId；不要填任意名字，否则会连到不存在的 profile。
   opencli_profile: "auto"
-  # P3 bsk 默认使用主浏览器 profile；未来可改为 dedicated 专用 profile。
-  bsk_profile: "main"
+  # P3 bsk 使用当前已连接的浏览器 profile，不在这里配置。
+  # 如需指定实例，直接把 bsk 的 --browser <id|label> 传给 `deep-reach bsk session start`。
   # 守卫默认开启：只拦截直接 fetch/XHR 站点内部接口和 debug replay。
   bsk_guard: true
 

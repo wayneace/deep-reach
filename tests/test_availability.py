@@ -5,7 +5,9 @@ from deep_reach.channels import load_registry
 from deep_reach.channels.base import Action, BackendSpec, Channel, Param
 from deep_reach.runtime.availability import (
     Environment,
+    action_risk,
     channel_availability,
+    channel_risk,
     next_action_for,
 )
 from deep_reach.runtime.keys import Keys
@@ -20,11 +22,36 @@ def channel(declared, backends, name="demo"):
     )
 
 
-def env(installed=True, connected=None, data=None):
+def env(installed=True, connected=None, data=None, bsk=False):
     return Environment(
         keys=Keys(data or {}),
         opencli_installed=installed,
         browser_connected=connected,
+        bsk_installed=bsk,
+    )
+
+
+def bsk_only_channel():
+    return Channel(
+        name="x",
+        category="social",
+        status="needs_login",
+        actions=(
+            Action(
+                "search",
+                requires="login",
+                ui_fallback=True,
+                risk="high",
+                backends=(),
+            ),
+            Action(
+                "read",
+                requires="login",
+                ui_fallback=True,
+                risk="high",
+                backends=(),
+            ),
+        ),
     )
 
 
@@ -85,6 +112,37 @@ class AvailabilityTest(unittest.TestCase):
             channel_availability(ch, env(installed=True, connected=True)).status,
             "needs_login",
         )
+
+    def test_bsk_only_channel_is_fallback_when_bsk_installed(self):
+        result = channel_availability(bsk_only_channel(), env(installed=False, bsk=True))
+        self.assertEqual(result.status, "fallback")
+        self.assertTrue(result.runnable)
+        self.assertEqual(result.available_actions, ())
+        self.assertEqual(result.ui_fallback_actions, ("search", "read"))
+
+    def test_bsk_only_channel_needs_setup_without_bsk(self):
+        result = channel_availability(
+            bsk_only_channel(), env(installed=False, bsk=False)
+        )
+        self.assertEqual(result.status, "needs_setup")
+        self.assertFalse(result.runnable)
+
+    def test_next_action_for_fallback_mentions_bsk(self):
+        ch = bsk_only_channel()
+        environment = env(installed=False, bsk=True)
+        result = channel_availability(ch, environment)
+        hint = next_action_for(ch, result, environment)
+        self.assertIn("deep-reach bsk", hint)
+        self.assertIn("当前浏览器 profile", hint)
+        self.assertNotIn("OpenCLI", hint)
+
+    def test_next_action_for_fallback_mentions_bsk_install_when_missing(self):
+        ch = bsk_only_channel()
+        environment = env(installed=False, bsk=False)
+        result = channel_availability(ch, environment)
+        hint = next_action_for(ch, result, environment)
+        self.assertIn("安装 bsk", hint)
+        self.assertIn("AGENT_INSTALL.md", hint)
 
     def test_experimental_stays_experimental_when_available(self):
         result = channel_availability(
@@ -240,6 +298,38 @@ class AvailabilityTest(unittest.TestCase):
         result = channel_availability(ch, env(installed=True, connected=True))
         self.assertNotIn("search", result.available_actions)
         self.assertIn("does not support login", " ".join(result.unavailable_actions["search"]))
+
+    def test_action_risk_uses_highest_backend_risk(self):
+        action = Action(
+            "search",
+            backends=(
+                BackendSpec("demo", "search", risk="medium"),
+                BackendSpec("other", "search", risk="high"),
+            ),
+        )
+        self.assertEqual(action_risk(action), "high")
+
+    def test_action_risk_keeps_higher_action_risk(self):
+        action = Action(
+            "search",
+            risk="high",
+            backends=(BackendSpec("demo", "search", risk="low"),),
+        )
+        self.assertEqual(action_risk(action), "high")
+
+    def test_channel_risk_uses_backend_risk(self):
+        ch = Channel(
+            name="demo",
+            category="test",
+            status="ready",
+            actions=(
+                Action(
+                    "search",
+                    backends=(BackendSpec("demo", "search", risk="high"),),
+                ),
+            ),
+        )
+        self.assertEqual(channel_risk(ch), "high")
 
     def test_login_action_accepts_supports_login_backend(self):
         ch = Channel(

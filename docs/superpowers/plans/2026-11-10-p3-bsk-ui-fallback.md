@@ -1,5 +1,7 @@
 # P3 bsk UI Fallback 实现计划
 
+> 2026-11-11 更新：v0.11.1 移除了未生效的 `browser.bsk_profile`；bsk 使用当前已连接的浏览器 profile。
+
 - 日期：2026-11-10
 - 设计：`docs/superpowers/specs/2026-11-10-p3-bsk-ui-fallback-design.md`
 - 目标版本：v0.11.0

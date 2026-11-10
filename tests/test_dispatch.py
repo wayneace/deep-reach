@@ -174,7 +174,7 @@ class DispatchTest(unittest.TestCase):
         self.assertEqual(calls["public"], 0)
         self.assertEqual(env["tier"], "p3")
         self.assertEqual(env["meta"]["fallback"], "bsk-ui")
-        self.assertEqual(env["meta"]["profile"], "main")
+        self.assertEqual(env["meta"]["profile"], "current")
         self.assertEqual(env["meta"]["risk"], "high")
         self.assertIn("direct fetch/XHR", env["meta"]["policy"]["forbid"][0])
         self.assertIn("deep-reach bsk", env["error"]["hint"])
@@ -303,6 +303,64 @@ class DispatchTest(unittest.TestCase):
             env = run_action(channel, "search", {"query": "x"}, keys=Keys({}))
         self.assertEqual(env["error"]["code"], NEED_UI)
         self.assertIn("high risk", stderr.getvalue().lower())
+
+    def _backend_risk_channel(self, label="ok"):
+        return Channel(
+            name="test",
+            category="test",
+            actions=(
+                Action(
+                    name="search",
+                    params=(Param("query"),),
+                    backends=(BackendSpec(label, "search", risk="high"),),
+                ),
+            ),
+        )
+
+    def test_backend_declared_high_risk_can_be_disabled(self):
+        BACKENDS.register("ok", lambda **kw: [{"title": "hit"}])
+        env = run_action(
+            self._backend_risk_channel(),
+            "search",
+            {"query": "x"},
+            keys=Keys({"risk": {"allow_high": False}}),
+        )
+        self.assertFalse(env["ok"])
+        self.assertEqual(env["error"]["code"], POLICY_BLOCKED)
+
+    def test_backend_declared_high_risk_emits_warning(self):
+        BACKENDS.register("ok", lambda **kw: [{"title": "hit"}])
+        stderr = io.StringIO()
+        with redirect_stderr(stderr):
+            env = run_action(
+                self._backend_risk_channel(),
+                "search",
+                {"query": "x"},
+                keys=Keys({}),
+            )
+        self.assertTrue(env["ok"])
+        self.assertIn("high risk", stderr.getvalue().lower())
+
+    def test_need_ui_meta_uses_backend_risk(self):
+        def broken(**kw):
+            raise ReachError(UPSTREAM_BROKEN, "boom")
+
+        BACKENDS.register("broken", broken)
+        channel = Channel(
+            name="test",
+            category="test",
+            actions=(
+                Action(
+                    name="search",
+                    params=(Param("query"),),
+                    backends=(BackendSpec("broken", "search", risk="high"),),
+                    ui_fallback=True,
+                ),
+            ),
+        )
+        env = run_action(channel, "search", {"query": "x"}, keys=Keys({}))
+        self.assertEqual(env["error"]["code"], NEED_UI)
+        self.assertEqual(env["meta"]["risk"], "high")
 
 
 if __name__ == "__main__":

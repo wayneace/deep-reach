@@ -1,5 +1,7 @@
 # P3 bsk UI Fallback 设计
 
+> 2026-11-11 更新：v0.11.1 移除了未生效的 `browser.bsk_profile`。bsk 使用当前已连接的浏览器 profile；需要指定实例时直接传 `--browser <id|label>` 给 `bsk session start`。
+
 - 日期：2026-11-10
 - 状态：设计已确认，待写计划
 - 目标版本：v0.11.0

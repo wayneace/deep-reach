@@ -320,7 +320,7 @@ channels:
     description: X / Twitter 搜索和帖子
     limits: 单帖可读不代表完整回复流
     not_supported: [完整评论树]
-    next_action: 用 bsk UI 回退（主浏览器 profile，高风险）；运行 deep-reach bsk
+    next_action: 用 bsk UI 回退（当前浏览器 profile，高风险）；运行 deep-reach bsk
     key: null
     requires_key: false
     actions:
@@ -346,7 +346,7 @@ channels:
     description: Reddit 搜索和评论
     limits: 不保证完整评论树
     not_supported: [完整评论树]
-    next_action: 用 bsk UI 回退（主浏览器 profile，高风险）；运行 deep-reach bsk
+    next_action: 用 bsk UI 回退（当前浏览器 profile，高风险）；运行 deep-reach bsk
     key: null
     requires_key: false
     actions:
@@ -372,7 +372,7 @@ channels:
     description: 小红书搜索、笔记、评论
     limits: 不保证全部评论；不声称理解图片/视频
     not_supported: [完整评论树, 图片/视频理解]
-    next_action: 用 bsk UI 回退（主浏览器 profile，高风险）；运行 deep-reach bsk
+    next_action: 用 bsk UI 回退（当前浏览器 profile，高风险）；运行 deep-reach bsk
     key: null
     requires_key: false
     actions:
@@ -405,7 +405,7 @@ channels:
     description: 知乎搜索和问题
     limits: 不保证完整回答/评论
     not_supported: [完整评论树]
-    next_action: 用 bsk UI 回退（主浏览器 profile，高风险）；运行 deep-reach bsk
+    next_action: 用 bsk UI 回退（当前浏览器 profile，高风险）；运行 deep-reach bsk
     key: null
     requires_key: false
     actions:
@@ -431,7 +431,7 @@ channels:
     description: 抖音搜索、用户视频、视频详情
     limits: 搜索/视频可能需登录；不保证评论
     not_supported: [完整评论树, 图片/视频理解]
-    next_action: 用 bsk UI 回退（主浏览器 profile，高风险）；运行 deep-reach bsk
+    next_action: 用 bsk UI 回退（当前浏览器 profile，高风险）；运行 deep-reach bsk
     key: null
     requires_key: false
     actions:

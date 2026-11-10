@@ -9,9 +9,9 @@
 
 ## 状态
 
-- 版本 **0.11.0**；225 个单元测试。
+- 版本 **0.11.1**；250 个单元测试。
 - 21 个可见渠道，10 个有 P0 覆盖；8 个 default 渠道 live smoke 通过（P0/P1，未含 P3）。
-- `channels` / `doctor` 的 `status` 是**当前环境实测值**（`ready` / `degraded` / `needs_setup` / `needs_login` / `needs_key` / `experimental`）；`declared_status` 保留注册表声明。
+- `channels` / `doctor` 的 `status` 是**当前环境实测值**（`ready` / `degraded` / `fallback` / `needs_setup` / `needs_login` / `needs_key` / `experimental`）；`declared_status` 保留注册表声明。
 - 可读可写：写操作由动作声明决定；P3 bsk 可执行写操作，调用方需确认用户意图。
 
 ## 快速开始
@@ -210,7 +210,7 @@ uv run deep-reach profile set <contextId>
 
 ### bsk UI 回退（P3）
 
-P3 用 `bsk`（Tencent BrowserSkill）驱动真实浏览器，不写站点 recipe。默认使用主浏览器 profile；写操作允许，但调用方必须确认用户意图。
+P3 用 `bsk`（Tencent BrowserSkill）驱动真实浏览器，不写站点 recipe。默认使用当前已连接的浏览器 profile；写操作允许，但调用方必须确认用户意图。需要指定浏览器实例时，直接把 bsk 的 `--browser <id|label>` 传给 `deep-reach bsk session start`。
 
 ```bash
 uv run deep-reach bsk status
@@ -231,8 +231,7 @@ uv run deep-reach bsk session stop <id>
 
 ```yaml
 browser:
-  bsk_profile: "main"   # main | dedicated
-  bsk_guard: true
+  bsk_guard: true       # 只拦截直接内部 API 调用和 debug replay
 risk:
   allow_high: true      # false 可整体禁用高风险动作
 ```

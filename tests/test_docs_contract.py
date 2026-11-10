@@ -37,6 +37,10 @@ class DocsContractTest(unittest.TestCase):
         text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
         self.assertIn("v0.11.0", text)
 
+    def test_changelog_has_v0111(self):
+        text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+        self.assertIn("v0.11.1", text)
+
 
 if __name__ == "__main__":
     unittest.main()

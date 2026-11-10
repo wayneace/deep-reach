@@ -32,13 +32,20 @@ class MissingClient(FakeClient):
 
 
 class DoctorTest(unittest.TestCase):
+    def setUp(self):
+        patcher = mock.patch(
+            "deep_reach.runtime.availability.bsk_available", return_value=True
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     def test_report_has_next_actions(self):
         registry = load_registry()
         report = build_doctor_report(registry, Keys({}), client=FakeClient())
         rows = {row["name"]: row for row in report["channels"]}
         self.assertEqual(rows["bilibili"]["status"], "degraded")
         self.assertIn("subtitle", rows["bilibili"]["next_action"])
-        self.assertEqual(rows["x"]["status"], "needs_login")
+        self.assertEqual(rows["x"]["status"], "fallback")
         self.assertTrue(rows["x"]["next_action"])
         self.assertIn("planned", report["summary"])
         self.assertFalse(report["opencli"]["missing"])
@@ -47,17 +54,13 @@ class DoctorTest(unittest.TestCase):
         registry = load_registry()
         text = format_doctor_text(build_doctor_report(registry, Keys({}), client=FakeClient()))
         self.assertIn("deep-reach doctor", text)
-        self.assertIn("needs_login", text)
+        self.assertIn("fallback", text)
         self.assertIn("→", text)
 
-    def test_bsk_profile_and_warning_are_reported(self):
+    def test_bsk_current_profile_and_warning_are_reported(self):
         registry = load_registry()
-        with mock.patch(
-            "deep_reach.runtime.doctor.shutil.which",
-            return_value="/usr/local/bin/bsk",
-        ):
-            report = build_doctor_report(registry, Keys({}), client=FakeClient())
-        self.assertEqual(report["bsk"]["profile"], "main")
+        report = build_doctor_report(registry, Keys({}), client=FakeClient())
+        self.assertEqual(report["bsk"]["profile"], "current")
         self.assertTrue(report["bsk"]["guard"])
         self.assertTrue(report["bsk"]["installed"])
         self.assertIn("write", report["bsk"]["warning"])
@@ -67,32 +70,36 @@ class DoctorTest(unittest.TestCase):
         self.assertGreaterEqual(report["summary"]["tiers"]["p3"], 6)
         text = format_doctor_text(report)
         self.assertIn("bsk:", text)
-        self.assertIn("profile main", text)
+        self.assertIn("profile current", text)
         self.assertIn("warning:", text)
         self.assertIn("p3", text)
 
-    def test_bsk_config_overrides_are_reported(self):
+    def test_bsk_guard_can_be_disabled(self):
         registry = load_registry()
         keys = Keys(
             {
-                "browser": {"bsk_profile": "dedicated", "bsk_guard": False},
+                "browser": {"bsk_guard": False},
                 "risk": {"allow_high": False},
             }
         )
-        with mock.patch(
-            "deep_reach.runtime.doctor.shutil.which",
-            return_value="/usr/local/bin/bsk",
-        ):
-            report = build_doctor_report(registry, keys, client=FakeClient())
-        self.assertEqual(report["bsk"]["profile"], "dedicated")
+        report = build_doctor_report(registry, keys, client=FakeClient())
         self.assertFalse(report["bsk"]["guard"])
         self.assertFalse(report["bsk"]["allow_high_risk"])
 
 
 class DoctorEnvironmentTest(unittest.TestCase):
-    def test_missing_opencli_marks_channels_needs_setup(self):
+    def setUp(self):
+        patcher = mock.patch(
+            "deep_reach.runtime.availability.bsk_available", return_value=True
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_missing_opencli_marks_channels_needs_setup_without_bsk(self):
         with mock.patch(
             "deep_reach.runtime.availability.shutil.which", return_value=None
+        ), mock.patch(
+            "deep_reach.runtime.availability.bsk_available", return_value=False
         ), mock.patch.dict("os.environ", {"DEEP_REACH_OPENCLI_BIN": ""}):
             report = build_doctor_report(
                 load_registry(), Keys({}), client=FakeClient(connected=False)
@@ -107,7 +114,23 @@ class DoctorEnvironmentTest(unittest.TestCase):
         self.assertEqual(rows["github"]["status"], "ready")
         self.assertEqual(rows["youtube"]["declared_status"], "ready")
         self.assertEqual(report["summary"]["needs_setup"], 8)
+        self.assertEqual(report["summary"]["fallback"], 0)
         self.assertEqual(report["summary"]["runnable"], 9)
+
+    def test_bsk_installed_marks_bsk_only_channels_fallback(self):
+        with mock.patch(
+            "deep_reach.runtime.availability.shutil.which", return_value=None
+        ), mock.patch.dict("os.environ", {"DEEP_REACH_OPENCLI_BIN": ""}):
+            report = build_doctor_report(
+                load_registry(), Keys({}), client=FakeClient(connected=False)
+            )
+        rows = {row["name"]: row for row in report["channels"]}
+        self.assertEqual(rows["x"]["status"], "fallback")
+        self.assertEqual(rows["reddit"]["status"], "fallback")
+        self.assertEqual(rows["youtube"]["status"], "needs_setup")
+        self.assertEqual(report["summary"]["fallback"], 5)
+        self.assertEqual(report["summary"]["needs_setup"], 3)
+        self.assertEqual(report["summary"]["runnable"], 14)
 
     def test_missing_opencli_text_shows_install_command(self):
         with mock.patch(

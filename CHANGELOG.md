@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.11.1 — 2026-11-11
+
+P3 收尾：状态准确性与风险门修正。
+
+- bsk-only 渠道（x / reddit / xiaohongshu / zhihu / douyin）在 bsk 已安装时显示 `fallback`，不再误报 `needs_setup`；bsk 未安装时仍为 `needs_setup`。
+- `doctor` summary 增加 `fallback` 计数；`fallback` 渠道计入 `runnable`（手动 UI 路径）。
+- 移除未生效的 `browser.bsk_profile`。bsk 始终使用当前已连接的浏览器 profile；需要指定实例时直接传 `--browser <id|label>` 给 `bsk session start`。
+- `risk.allow_high` 与高风险警告改为使用 action + backend 的最高风险；`NEED_UI` 的 `meta.risk` 同步。
+- `channels` / `doctor` / `capabilities` 的 action risk 显示 backend 声明的风险。
+- 测试数更新为 250。
+
 ## v0.11.0 — 2026-11-10
 
 P3 bsk UI 回退与可写边界。

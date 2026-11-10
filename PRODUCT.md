@@ -1,6 +1,6 @@
 # Deep-Reach 产品定义
 
-> 版本：v0.11.0  
+> 版本：v0.11.1
 > 日期：2026-11-10
 
 ## 一句话
@@ -106,7 +106,7 @@ Agent-Reach 是同类产品，Deep-Reach 参考它的 Channel / Action / Backend
 - P3 后端：`deep-reach bsk`（bsk UI 回退，agent 驱动；守卫拦截直接内部 API 调用和 `debug replay`）。
 - 雪球编排：`tencent-quote` / `tencent-search` → `xueqiu-api`；`hot` / `hot_stocks` 失败时走 bsk 回退。
 - R3 可靠性：跨进程并发槽、10 秒搜索间隔、1 小时渠道冷却、60–120 秒后端暂停、动作级 deadline。
-- 环境感知状态：`doctor` / `channels` 的 `status` 反映 key、OpenCLI 连接、bsk profile 和可用动作；`declared_status` 保留注册表原值。
+- 环境感知状态：`doctor` / `channels` 的 `status` 反映 key、OpenCLI 连接、bsk 可用性和可用动作；`declared_status` 保留注册表原值。
 - URL 边界：`web read` 默认只访问 http/https 公网地址；每次重定向重新校验；`DEEP_REACH_ALLOW_PRIVATE_URLS=1` 可显式放行私有地址。
 
 ### 下一步
@@ -125,4 +125,4 @@ Agent-Reach 是同类产品，Deep-Reach 参考它的 Channel / Action / Backend
 - 缺 key / 缺登录时 `doctor` 能说清楚下一步。
 - P3 bsk 守卫拦截直接内部 API 调用；写操作放行但需确认用户意图。
 - 每个可见渠道都有 capability note。
-- 225 个单元测试 + 1 个 live smoke 脚本。
+- 250 个单元测试 + 1 个 live smoke 脚本。

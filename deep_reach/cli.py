@@ -45,6 +45,7 @@ from .runtime import state as state_store
 from .runtime.availability import (
     OPENCLI_BIN_ENV,
     OPENCLI_INSTALL_COMMAND,
+    action_risk,
     channel_availability,
     channel_risk,
     detect_environment,
@@ -239,7 +240,7 @@ def cmd_channels(args: argparse.Namespace) -> int:
                             "name": a.name,
                             "requires": a.requires,
                             "tiers": list(a.tiers),
-                            "risk": a.risk or "low",
+                            "risk": action_risk(a),
                             "ui_fallback": a.ui_fallback,
                             "description": a.description,
                         }
@@ -313,7 +314,7 @@ def cmd_capabilities(args: argparse.Namespace) -> int:
                             "name": a.name,
                             "requires": a.requires,
                             "tiers": list(a.tiers),
-                            "risk": a.risk or "low",
+                            "risk": action_risk(a),
                             "ui_fallback": a.ui_fallback,
                             "description": a.description,
                         }
