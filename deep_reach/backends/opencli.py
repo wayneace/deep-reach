@@ -119,7 +119,7 @@ class OpenCLIClient:
 
         from ..runtime.profile import launch
 
-        result = launch(page="about:blank")
+        result = launch(page=None)
         if not result.get("ok"):
             raise ReachError(
                 NEED_SETUP,

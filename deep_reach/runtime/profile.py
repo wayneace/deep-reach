@@ -99,23 +99,28 @@ def profile_dir() -> Path:
     return Path.home() / ".deep-reach" / "chrome-profile"
 
 
-_CHROME_MARKERS = (
-    "/google chrome.app/contents/macos/google chrome",
-    "/google-chrome",
-    "/google-chrome-stable",
-    "/chromium",
-    "/chromium-browser",
-    "/chrome",
-    "/microsoft edge",
-    "/msedge",
+_MAC_CHROME_RE = re.compile(
+    r"(?i)^/.*/google chrome\.app/contents/macos/google chrome(?: |$)"
+)
+_MAC_CHROMIUM_RE = re.compile(
+    r"(?i)^/.*/chromium\.app/contents/macos/chromium(?: |$)"
+)
+_LINUX_CHROME_PREFIXES = (
+    "/usr/bin/google-chrome",
+    "/usr/bin/google-chrome-stable",
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+    "/snap/bin/chromium",
 )
 
 
 def _is_chrome_command(command: str, needle: str) -> bool:
     if needle not in command:
         return False
+    if _MAC_CHROME_RE.match(command) or _MAC_CHROMIUM_RE.match(command):
+        return True
     lowered = command.lower()
-    return any(marker in lowered for marker in _CHROME_MARKERS)
+    return any(lowered.startswith(prefix) for prefix in _LINUX_CHROME_PREFIXES)
 
 
 def _chrome_pids() -> list[int]:
@@ -233,21 +238,21 @@ def chrome_path() -> Optional[str]:
     return None
 
 
-def launch(page: str = "chrome://extensions") -> dict:
+def launch(page: Optional[str] = "chrome://extensions") -> dict:
     chrome = chrome_path()
     if not chrome:
         return {"ok": False, "error": "Chrome not found; set CHROME_PATH or install Chrome"}
     path = profile_dir()
     path.mkdir(mode=0o700, parents=True, exist_ok=True)
     ensure_private_dir(path)
+    args = [chrome, f"--user-data-dir={path}", "--profile-directory=Default"]
+    if page is None:
+        args.append("--no-startup-window")
+    else:
+        args.append(page)
     try:
         process = subprocess.Popen(
-            [
-                chrome,
-                f"--user-data-dir={path}",
-                "--profile-directory=Default",
-                page,
-            ],
+            args,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             env=child_env(),

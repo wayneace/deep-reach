@@ -7,7 +7,7 @@
 - `setup` 不直接安装 OpenCLI，而是提示 agent 使用当前客户端的管理器（Cherry Studio 用 `cli_install`，recipe `npm:@jackwener/opencli`；普通环境用 npm）；`doctor` / `update` / OpenCLI 缺失错误使用同一套提示。
 - `setup` 汇总创建/保留的文件、仍为空的 key 及用途、扩展商店链接和 `profile launch/status/set` 步骤；不自动打开 Chrome。
 - P1 动作在专用 Chrome profile 未运行时自动启动它并等待扩展连接；动作结束后关闭专用 Chrome（只匹配专用 `user-data-dir`，不影响主浏览器）；首次安装扩展仍需 `profile launch`。
-- 测试数更新为 325。
+- 测试数更新为 326。
 
 ## v0.12.0 — 2026-11-11
 

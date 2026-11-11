@@ -103,13 +103,31 @@ class ProfileTest(unittest.TestCase):
             launch(page="about:blank")
         self.assertEqual(popen.call_args.args[0][-1], "about:blank")
 
+    def test_profile_launch_can_start_without_window(self):
+        fake = mock.Mock(pid=1234)
+        directory = Path(tempfile.mkdtemp())
+        with mock.patch(
+            "deep_reach.runtime.profile.chrome_path", return_value="/chrome"
+        ), mock.patch(
+            "deep_reach.runtime.profile.profile_dir", return_value=directory
+        ), mock.patch(
+            "deep_reach.runtime.profile.subprocess.Popen", return_value=fake
+        ) as popen:
+            launch(page=None)
+        args = popen.call_args.args[0]
+        self.assertIn("--no-startup-window", args)
+        self.assertNotIn("about:blank", args)
+
     def test_close_kills_only_the_dedicated_profile(self):
         if os.name == "nt":
             self.skipTest("POSIX ps parsing only")
         directory = Path("/tmp/deep-reach-profile")
+        chrome = (
+            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+        )
         output = (
-            f" 123 /chrome --user-data-dir={directory} --profile-directory=Default\n"
-            " 456 /chrome --user-data-dir=/tmp/other\n"
+            f" 123 {chrome} --user-data-dir={directory} --profile-directory=Default\n"
+            f" 456 {chrome} --user-data-dir=/tmp/other\n"
             f" 789 /bin/zsh -c echo --user-data-dir={directory}\n"
         )
         with mock.patch(

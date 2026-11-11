@@ -9,7 +9,7 @@
 
 ## 状态
 
-- 版本 **0.12.0**；325 个单元测试。
+- 版本 **0.12.0**；326 个单元测试。
 - 21 个可见渠道，10 个有 P0 覆盖；8 个 default 渠道 live smoke 通过（P0/P1，未含 P3）。
 - `channels` / `doctor` 的 `status` 是**当前环境实测值**（`ready` / `degraded` / `fallback` / `needs_setup` / `needs_login` / `needs_key` / `experimental`）；`declared_status` 保留注册表声明。
 - 可读可写：写操作由动作声明决定；P3 bsk 可执行写操作，调用方需确认用户意图。
@@ -211,7 +211,7 @@ uv run deep-reach profile status     # 查看所有已连接 contextId
 uv run deep-reach profile set <contextId>
 ```
 
-之后 `deep-reach doctor` 会显示 `browser: dedicated <contextId> (connected)`。专用 profile 里的网站需要单独登录；P0/P2 渠道不受影响。P1 动作发现专用 profile 未运行时，会自动启动 `~/.deep-reach/chrome-profile`（打开 about:blank）并等待扩展连接，不需要手动执行 `profile launch`；动作结束后会自动关闭这个专用 Chrome，只匹配专用 `user-data-dir`，不影响主浏览器。首次安装扩展仍需先启动一次专用窗口。`doctor` 会对比已安装 OpenCLI 与推荐版本，落后时给出升级命令；OpenCLI 不自动升级。
+之后 `deep-reach doctor` 会显示 `browser: dedicated <contextId> (connected)`。专用 profile 里的网站需要单独登录；P0/P2 渠道不受影响。P1 动作发现专用 profile 未运行时，会自动无窗口启动 `~/.deep-reach/chrome-profile`（`--no-startup-window`）并等待扩展连接，不需要手动执行 `profile launch`；动作结束后会自动关闭这个专用 Chrome，只匹配专用 `user-data-dir`，不影响主浏览器。首次安装扩展仍需先启动一次专用窗口。`doctor` 会对比已安装 OpenCLI 与推荐版本，落后时给出升级命令；OpenCLI 不自动升级。
 
 `OPENCLI_WINDOW` 固定为 `background`：命令不会抢前台窗口。Browser Bridge **没有真正的 headless 模式**；真 headless 只能走 CDP，会失去扩展和专用 profile 的登录态，因此不在支持范围内。
 

@@ -77,7 +77,7 @@ class OpenCLIAutoLaunchTest(unittest.TestCase):
             "deep_reach.runtime.profile.launch", return_value={"ok": True}
         ) as launch, mock.patch("deep_reach.backends.opencli.time.sleep"):
             client.ensure_browser()
-        launch.assert_called_once_with(page="about:blank")
+        launch.assert_called_once_with(page=None)
 
     def test_ensure_browser_raises_when_launch_fails(self):
         client = self._client()
