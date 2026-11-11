@@ -1,7 +1,6 @@
 import argparse
 import io
 import json
-import os
 import tempfile
 import unittest
 from contextlib import redirect_stdout
@@ -9,7 +8,8 @@ from pathlib import Path
 from unittest import mock
 
 from deep_reach.cli import cmd_channels, cmd_setup
-from deep_reach.runtime.keys import Keys, template_path
+from deep_reach.runtime.keys import Keys
+from deep_reach.runtime.result import CONFIG_ERROR, ReachError
 
 
 class ChannelsJsonTest(unittest.TestCase):
@@ -114,96 +114,101 @@ class ChannelsJsonTest(unittest.TestCase):
         self.assertNotIn("OpenCLI", row["next_action"])
 
 
-class SetupTextTest(unittest.TestCase):
-    def test_setup_prompts_opencli_install_when_missing(self):
+class SetupDeploymentTest(unittest.TestCase):
+    def _keys(self, tmp):
+        return Path(tmp) / "home" / ".deep-reach" / "keys.yaml"
+
+    def test_setup_dry_run_makes_no_changes(self):
         with tempfile.TemporaryDirectory() as tmp:
-            key_path = Path(tmp) / "home" / ".deep-reach" / "keys.yaml"
+            key_path = self._keys(tmp)
             with mock.patch(
-                "deep_reach.cli.shutil.which", return_value=None
-            ), mock.patch(
+                "deep_reach.cli._load_keys",
+                return_value=Keys({}, path=key_path),
+            ):
+                buffer = io.StringIO()
+                with redirect_stdout(buffer):
+                    code = cmd_setup(
+                        argparse.Namespace(dry_run=True, yes=False)
+                    )
+
+            self.assertEqual(code, 0)
+            self.assertFalse(key_path.exists())
+            self.assertIn("Will create", buffer.getvalue())
+
+    def test_setup_yes_creates_keys(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            key_path = self._keys(tmp)
+            with mock.patch(
+                "deep_reach.cli._load_keys",
+                return_value=Keys({}, path=key_path),
+            ):
+                buffer = io.StringIO()
+                with redirect_stdout(buffer):
+                    code = cmd_setup(
+                        argparse.Namespace(dry_run=False, yes=True)
+                    )
+
+            self.assertEqual(code, 0)
+            self.assertTrue(key_path.exists())
+            output = buffer.getvalue()
+            self.assertIn("Empty keys", output)
+            self.assertIn("chromewebstore.google.com", output)
+            self.assertIn("cli_install", output)
+
+    def test_setup_declined_makes_no_changes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            key_path = self._keys(tmp)
+            with mock.patch(
                 "deep_reach.cli._load_keys",
                 return_value=Keys({}, path=key_path),
             ), mock.patch(
-                "deep_reach.cli.profile_status",
-                return_value={
-                    "opencli": {
-                        "connected": False,
-                        "configured": False,
-                        "context_id": None,
-                    }
-                },
-            ), mock.patch.dict("os.environ", {"DEEP_REACH_OPENCLI_BIN": ""}):
+                "deep_reach.cli.sys.stdin.isatty", return_value=True
+            ), mock.patch("builtins.input", return_value="n"):
                 buffer = io.StringIO()
                 with redirect_stdout(buffer):
-                    code = cmd_setup(argparse.Namespace())
+                    code = cmd_setup(
+                        argparse.Namespace(dry_run=False, yes=False)
+                    )
 
-            self.assertTrue(key_path.parent.is_dir())
-        output = buffer.getvalue()
-        self.assertEqual(code, 0)
-        self.assertIn("npm install -g @jackwener/opencli", output)
-        self.assertIn(
-            f"Keys: optional — copy {template_path()} to {key_path}.", output
-        )
+            self.assertEqual(code, 2)
+            self.assertFalse(key_path.exists())
 
-    def test_setup_reports_insecure_keys_mode(self):
-        if os.name == "nt":
-            self.skipTest("POSIX permissions only")
+    def test_setup_non_interactive_without_yes_makes_no_changes(self):
         with tempfile.TemporaryDirectory() as tmp:
-            key_path = Path(tmp) / "keys.yaml"
-            key_path.write_text("version: 1\n", encoding="utf-8")
-            os.chmod(key_path, 0o644)
+            key_path = self._keys(tmp)
             with mock.patch(
-                "deep_reach.cli.shutil.which", return_value=None
-            ), mock.patch(
                 "deep_reach.cli._load_keys",
                 return_value=Keys({}, path=key_path),
             ), mock.patch(
-                "deep_reach.cli.profile_status",
-                return_value={
-                    "opencli": {
-                        "connected": False,
-                        "configured": False,
-                        "context_id": None,
-                    }
-                },
-            ), mock.patch.dict("os.environ", {"DEEP_REACH_OPENCLI_BIN": ""}):
+                "deep_reach.cli.sys.stdin.isatty", return_value=False
+            ):
                 buffer = io.StringIO()
                 with redirect_stdout(buffer):
-                    code = cmd_setup(argparse.Namespace())
-        output = buffer.getvalue()
-        self.assertEqual(code, 0)
-        self.assertIn("keys mode", output)
-        self.assertIn("644", output)
-        self.assertIn("warning", output)
+                    code = cmd_setup(
+                        argparse.Namespace(dry_run=False, yes=False)
+                    )
 
-    def test_setup_points_to_keys_file_when_browser_connected(self):
+            self.assertEqual(code, 2)
+            self.assertFalse(key_path.exists())
+            self.assertIn("--yes", buffer.getvalue())
+
+    def test_setup_invalid_yaml_does_not_overwrite(self):
         with tempfile.TemporaryDirectory() as tmp:
-            key_path = Path(tmp) / "keys.yaml"
+            key_path = self._keys(tmp)
+            key_path.parent.mkdir(parents=True)
+            key_path.write_text("bad: [", encoding="utf-8")
             with mock.patch(
-                "deep_reach.cli.shutil.which", return_value="/usr/bin/opencli"
-            ), mock.patch(
                 "deep_reach.cli._load_keys",
-                return_value=Keys({}, path=key_path),
-            ), mock.patch(
-                "deep_reach.cli.profile_status",
-                return_value={
-                    "opencli": {
-                        "connected": True,
-                        "configured": True,
-                        "context_id": "ctx",
-                    }
-                },
-            ), mock.patch.dict("os.environ", {"DEEP_REACH_OPENCLI_BIN": ""}):
+                side_effect=ReachError(CONFIG_ERROR, "invalid YAML"),
+            ):
                 buffer = io.StringIO()
                 with redirect_stdout(buffer):
-                    code = cmd_setup(argparse.Namespace())
+                    code = cmd_setup(
+                        argparse.Namespace(dry_run=False, yes=True)
+                    )
 
-        output = buffer.getvalue()
-        self.assertEqual(code, 0)
-        self.assertIn(
-            f"Keys: optional — copy {template_path()} to {key_path}.", output
-        )
-        self.assertIn("Next: deep-reach doctor", output)
+            self.assertEqual(code, 2)
+            self.assertEqual(key_path.read_text(encoding="utf-8"), "bad: [")
 
 
 if __name__ == "__main__":

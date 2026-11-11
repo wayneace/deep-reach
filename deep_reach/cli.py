@@ -11,9 +11,7 @@ Default output is one JSON object. `--text` gives a human summary.
 from __future__ import annotations
 
 import argparse
-import os
 import shutil
-import stat
 import subprocess
 import sys
 from pathlib import Path
@@ -44,7 +42,6 @@ from .runtime import health as health_state
 from .runtime import quota as quota_state
 from .runtime import state as state_store
 from .runtime.availability import (
-    OPENCLI_BIN_ENV,
     OPENCLI_CLIENT_HINT,
     OPENCLI_INSTALL_COMMAND,
     action_risk,
@@ -57,10 +54,15 @@ from .runtime.browser_config import normalize_opencli_profile
 from .runtime.child_env import child_env
 from .runtime.dispatch import run_action
 from .runtime.doctor import build_doctor_report, format_doctor_text
-from .runtime.keys import Keys, template_path
+from .runtime.keys import Keys
 from .runtime.profile import launch as launch_profile
-from .runtime.secure_paths import ensure_private_dir
 from .runtime.profile import profile_dir, set_context, status as profile_status
+from .runtime.setup import (
+    apply_setup,
+    build_setup_plan,
+    format_setup_plan,
+    format_setup_summary,
+)
 from .runtime.result import ReachError, dump, redact_text
 
 JSON_DEFAULT = True
@@ -479,121 +481,41 @@ def cmd_state(args: argparse.Namespace) -> int:
 
 
 def cmd_setup(args: argparse.Namespace) -> int:
-    checks = []
-    checks.append(("python", sys.version.split()[0], "ok"))
-    uv = shutil.which("uv")
-    checks.append(("uv", uv or "not found", "ok" if uv else "missing"))
-    npm = shutil.which("npm")
-    checks.append(("npm", npm or "not found", "ok" if npm else "missing"))
-    opencli = os.environ.get(OPENCLI_BIN_ENV) or shutil.which("opencli")
-    version = "not installed"
-    if opencli:
-        try:
-            result = subprocess.run(
-                [opencli, "--version"],
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-                timeout=10,
-                env=child_env(),
-            )
-            version = (result.stdout or result.stderr).strip() or "unknown"
-        except Exception as exc:  # noqa: BLE001
-            version = f"error: {exc}"
-    checks.append(("opencli", version, "ok" if opencli else "missing"))
-
     try:
         keys = _load_keys()
     except ReachError as exc:
         print(f"CONFIG_ERROR: {exc.message}", file=sys.stderr)
         return 2
-    checks.append(("keys", str(keys.path), "ok" if keys.path and keys.path.exists() else "missing (optional)"))
-    keys_mode = "n/a"
-    keys_secure = True
-    if keys.path and keys.path.exists() and os.name != "nt":
-        try:
-            raw_mode = stat.S_IMODE(keys.path.stat().st_mode)
-            keys_mode = f"{raw_mode:03o}"
-            keys_secure = not (raw_mode & 0o077)
-        except OSError:
-            keys_mode = "unknown"
-            keys_secure = False
-    checks.append(
-        (
-            "keys mode",
-            keys_mode,
-            "ok" if keys_secure else "warning",
-        )
-    )
-    template = template_path()
-    checks.append(("template", str(template), "ok" if template.is_file() else "missing"))
 
-    profile = profile_status(keys)
-    opencli_state = profile.get("opencli", {})
-    connected = bool(opencli_state.get("connected"))
-    configured = bool(opencli_state.get("configured"))
-    checks.append(
-        (
-            "profile",
-            (
-                f"dedicated ({opencli_state.get('context_id')})"
-                if configured
-                else "not configured"
-            ),
-            "ok" if configured else "missing",
-        )
-    )
-    checks.append(
-        (
-            "browser",
-            (
-                f"connected ({opencli_state.get('context_id')})"
-                if connected
-                else "not connected"
-            ),
-            "ok" if connected else "missing",
-        )
-    )
+    plan = build_setup_plan(keys)
+    print(format_setup_plan(plan))
 
-    print("Deep-Reach setup")
-    print()
-    for name, value, state in checks:
-        print(redact_text(f"  {name:<10} {state:<18} {value}"))
-    print()
-    keys_exists = bool(keys.path and keys.path.exists())
-    if not keys_exists and keys.path is not None:
-        if keys.path.parent == Path.home() / ".deep-reach":
-            ensure_private_dir(keys.path.parent)
-        else:
-            keys.path.parent.mkdir(parents=True, exist_ok=True)
-    printed_next = False
-    if not opencli:
-        print("Next: install OpenCLI:")
-        print(f"  {OPENCLI_INSTALL_COMMAND}")
-        print("Then create a dedicated browser profile:")
-        print("  1. deep-reach profile launch")
-        print("  2. install/enable the OpenCLI extension in that window")
-        print("  3. deep-reach profile status")
-        print("  4. deep-reach profile set <contextId>")
-        printed_next = True
-    elif not configured:
-        print("Next: create a dedicated browser profile:")
-        print("  1. deep-reach profile launch")
-        print("  2. install/enable the OpenCLI extension in that window")
-        print("  3. deep-reach profile status")
-        print("  4. deep-reach profile set <contextId>")
-        printed_next = True
-    elif not connected:
-        print("Next: open the Deep-Reach dedicated Chrome profile and enable the extension.")
-        print("Then run: deep-reach profile status")
-        printed_next = True
-    if not keys_exists:
-        if printed_next:
+    if getattr(args, "dry_run", False):
+        return 0
+
+    if not plan.create_dir and not plan.create_file:
+        print()
+        print(format_setup_summary(plan, [], keys))
+        return 0
+
+    if not getattr(args, "yes", False):
+        if not sys.stdin.isatty():
             print()
-        print(redact_text(f"Keys: optional — copy {template} to {keys.path}."))
-    if opencli and configured and connected:
-        print("Next: deep-reach doctor")
+            print("No changes made. Re-run with --yes after confirming.")
+            return 2
+        answer = input("Proceed with file setup? [y/N] ")
+        if answer.strip().lower() not in ("y", "yes"):
+            print("No changes made.")
+            return 2
+
+    try:
+        results = apply_setup(plan)
+    except ReachError as exc:
+        print(f"CONFIG_ERROR: {exc.message}", file=sys.stderr)
+        return 2
+
+    print()
+    print(format_setup_summary(plan, results, keys))
     return 0
 
 
@@ -791,7 +713,13 @@ def build_parser(registry) -> argparse.ArgumentParser:
     state_cmd.add_argument("--clear", action="store_true", help="forget saved health")
     state_cmd.set_defaults(func=cmd_state)
 
-    setup = sub.add_parser("setup", help="check environment and next steps")
+    setup = sub.add_parser("setup", help="deploy keys file and next steps")
+    setup.add_argument(
+        "--dry-run", action="store_true", help="print the plan without writing"
+    )
+    setup.add_argument(
+        "--yes", action="store_true", help="apply the plan without prompting"
+    )
     setup.set_defaults(func=cmd_setup)
 
     profile = sub.add_parser("profile", help="inspect or set the Chrome profile")
