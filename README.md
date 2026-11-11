@@ -9,7 +9,7 @@
 
 ## 状态
 
-- 版本 **0.12.0**；255 个单元测试。
+- 版本 **0.12.0**；299 个单元测试。
 - 21 个可见渠道，10 个有 P0 覆盖；8 个 default 渠道 live smoke 通过（P0/P1，未含 P3）。
 - `channels` / `doctor` 的 `status` 是**当前环境实测值**（`ready` / `degraded` / `fallback` / `needs_setup` / `needs_login` / `needs_key` / `experimental`）；`declared_status` 保留注册表声明。
 - 可读可写：写操作由动作声明决定；P3 bsk 可执行写操作，调用方需确认用户意图。
@@ -21,6 +21,7 @@
 ```bash
 cd deep-reach
 uv sync
+uv run deep-reach setup           # 确认后创建 ~/.deep-reach/keys.yaml
 uv run deep-reach doctor
 uv run deep-reach tiers
 uv run deep-reach channels
@@ -159,7 +160,9 @@ uv run python scripts/smoke.py
 deep_reach/data/keys.example.yaml
 ```
 
-运行 `deep-reach setup` 会打印当前安装里的模板绝对路径。所有 key 都是可选的；缺失时对应后端禁用或降级，不阻塞其他渠道。
+首次运行 `deep-reach setup` 会先列出将创建或保留的文件，确认后从包内模板创建 `~/.deep-reach/keys.yaml`（已存在则绝不覆盖）。`--dry-run` 只打印计划，`--yes` 跳过确认；非交互环境没有 `--yes` 时不会做任何修改。所有 key 都是可选的；缺失时对应后端禁用或降级，不阻塞其他渠道。
+
+`setup` 最后会列出仍为空的 key、扩展商店链接和 `profile launch/status/set` 步骤；它不会启动 Chrome，也不会直接安装 OpenCLI。OpenCLI 由当前 agent 客户端安装：Cherry Studio 用它的 CLI 管理器（`cli_install`，recipe `npm:@jackwener/opencli`）；普通环境用 `npm install -g @jackwener/opencli@2.0.3`。
 
 安全默认值：
 
@@ -189,11 +192,12 @@ P2 搜索/阅读（按顺序降级，缺 key 自动跳过）：
 
 ## 浏览器与 profile
 
-OpenCLI 通过 Browser Bridge 扩展连接 Chrome。先安装 CLI：
+OpenCLI 通过 Browser Bridge 扩展连接 Chrome。先由当前 agent 客户端安装 CLI：
 
-```bash
-npm install -g @jackwener/opencli   # 当前推荐 2.0.3
-```
+- Cherry Studio：用它的 CLI 管理器（`cli_install`，recipe `npm:@jackwener/opencli`）。
+- 普通环境：`npm install -g @jackwener/opencli@2.0.3`。
+
+`deep-reach setup` 会打印这段客户端中立提示，但不会代替客户端执行安装。
 
 P1 只使用**显式绑定的专用 Chrome profile**。Deep-Reach 不会自动选择已连接的 profile，也不会复用主浏览器的登录态。`opencli_profile` 留空或填 `auto` 时，P1 渠道显示 `needs_setup`，不会运行 OpenCLI。
 
