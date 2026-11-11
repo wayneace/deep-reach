@@ -8,6 +8,7 @@ from unittest import mock
 
 from deep_reach.backends.opencli import (
     OpenCLIClient,
+    make_opencli_handler,
     register_opencli_backends,
     version_status,
 )
@@ -133,6 +134,56 @@ class OpenCLIAutoLaunchTest(unittest.TestCase):
             client.ensure_browser()
         status.assert_not_called()
         launch.assert_not_called()
+
+    def test_close_browser_is_off_by_default(self):
+        client = OpenCLIClient(bin_path=sys.executable, profile="ctx-1234")
+        with mock.patch("deep_reach.runtime.profile.close") as close:
+            client.close_browser()
+        close.assert_not_called()
+
+    def test_close_browser_closes_dedicated_profile(self):
+        client = self._client()
+        with mock.patch("deep_reach.runtime.profile.close") as close:
+            client.close_browser()
+        close.assert_called_once_with()
+
+    def test_handler_closes_browser_after_success(self):
+        client = self._client()
+        client.ensure_browser = mock.Mock()
+        client.run = mock.Mock(return_value={"items": []})
+        client.close_browser = mock.Mock()
+        handler = make_opencli_handler(client)
+        spec = BackendSpec("opencli-demo", "search", options={"site": "demo"})
+        channel = Channel("demo", "social", ())
+        with mock.patch(
+            "deep_reach.backends.opencli.opencli_items", return_value=[]
+        ):
+            handler(
+                action="search",
+                params={},
+                timeout=5,
+                spec=spec,
+                channel=channel,
+            )
+        client.close_browser.assert_called_once_with()
+
+    def test_handler_closes_browser_after_failure(self):
+        client = self._client()
+        client.ensure_browser = mock.Mock()
+        client.run = mock.Mock(side_effect=ReachError(NEED_SETUP, "boom"))
+        client.close_browser = mock.Mock()
+        handler = make_opencli_handler(client)
+        spec = BackendSpec("opencli-demo", "search", options={"site": "demo"})
+        channel = Channel("demo", "social", ())
+        with self.assertRaises(ReachError):
+            handler(
+                action="search",
+                params={},
+                timeout=5,
+                spec=spec,
+                channel=channel,
+            )
+        client.close_browser.assert_called_once_with()
 
 
 class OpenCLIBackendTest(unittest.TestCase):

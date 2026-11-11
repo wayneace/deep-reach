@@ -1,11 +1,12 @@
 import os
+import signal
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
 
-from deep_reach.runtime.profile import chrome_path, launch, set_context
+from deep_reach.runtime.profile import chrome_path, close, launch, set_context
 from deep_reach.runtime.result import ReachError
 
 
@@ -101,6 +102,27 @@ class ProfileTest(unittest.TestCase):
         ) as popen:
             launch(page="about:blank")
         self.assertEqual(popen.call_args.args[0][-1], "about:blank")
+
+    def test_close_kills_only_the_dedicated_profile(self):
+        if os.name == "nt":
+            self.skipTest("POSIX ps parsing only")
+        directory = Path("/tmp/deep-reach-profile")
+        output = (
+            f" 123 /chrome --user-data-dir={directory} --profile-directory=Default\n"
+            " 456 /chrome --user-data-dir=/tmp/other\n"
+            f" 789 /bin/zsh -c echo --user-data-dir={directory}\n"
+        )
+        with mock.patch(
+            "deep_reach.runtime.profile.profile_dir", return_value=directory
+        ), mock.patch(
+            "deep_reach.runtime.profile.subprocess.run",
+            return_value=mock.Mock(stdout=output),
+        ), mock.patch(
+            "deep_reach.runtime.profile.os.kill"
+        ) as kill:
+            result = close()
+        self.assertEqual(result["closed"], [123])
+        kill.assert_called_once_with(123, signal.SIGTERM)
 
     def test_set_context_preserves_symlink_target(self):
         if os.name == "nt":

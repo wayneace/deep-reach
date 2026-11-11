@@ -136,6 +136,7 @@ class OpenCLIClient:
             time.sleep(0.5)
             if self.profile_status().get("connected"):
                 return
+        self.close_browser()
         raise ReachError(
             NEED_SETUP,
             "the dedicated Chrome profile did not connect",
@@ -144,6 +145,13 @@ class OpenCLIClient:
                 "extension is enabled; then run `deep-reach profile status`."
             ),
         )
+
+    def close_browser(self) -> None:
+        if not self.auto_launch or not self.profile:
+            return
+        from ..runtime.profile import close
+
+        close()
 
     def _effective_profile(self) -> str:
         return self.profile
@@ -368,15 +376,18 @@ def make_opencli_handler(client: OpenCLIClient):
             raise ReachError(BAD_INPUT, f"{spec.label} is missing the opencli site option")
         command = str(spec.options.get("command") or action)
         args = _build_args(spec, params)
-        client.ensure_browser()
-        data = client.run(str(site), command, args, timeout)
-        return opencli_items(
-            data,
-            source=channel.name,
-            category=channel.category,
-            platform=str(spec.options.get("platform") or site),
-            backend=spec.label,
-        )
+        try:
+            client.ensure_browser()
+            data = client.run(str(site), command, args, timeout)
+            return opencli_items(
+                data,
+                source=channel.name,
+                category=channel.category,
+                platform=str(spec.options.get("platform") or site),
+                backend=spec.label,
+            )
+        finally:
+            client.close_browser()
 
     return handler
 

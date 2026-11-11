@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -96,6 +97,103 @@ def profile_dir() -> Path:
         base = Path(os.environ.get("LOCALAPPDATA") or (Path.home() / "AppData" / "Local"))
         return base / "deep-reach" / "chrome-profile"
     return Path.home() / ".deep-reach" / "chrome-profile"
+
+
+_CHROME_MARKERS = (
+    "/google chrome.app/contents/macos/google chrome",
+    "/google-chrome",
+    "/google-chrome-stable",
+    "/chromium",
+    "/chromium-browser",
+    "/chrome",
+    "/microsoft edge",
+    "/msedge",
+)
+
+
+def _is_chrome_command(command: str, needle: str) -> bool:
+    if needle not in command:
+        return False
+    lowered = command.lower()
+    return any(marker in lowered for marker in _CHROME_MARKERS)
+
+
+def _chrome_pids() -> list[int]:
+    path = profile_dir()
+    if os.name == "nt":
+        script = (
+            "Get-CimInstance Win32_Process | Where-Object { "
+            "$_.Name -match '^(chrome|chromium|msedge)\\.exe$' -and "
+            f"$_.CommandLine -like '*--user-data-dir={path}*' }} | "
+            "Select-Object -ExpandProperty ProcessId"
+        )
+        try:
+            result = subprocess.run(
+                ["powershell", "-NoProfile", "-NonInteractive", "-Command", script],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=5,
+                env=child_env(),
+            )
+        except (OSError, subprocess.SubprocessError):
+            return []
+        pids = []
+        for line in (result.stdout or "").splitlines():
+            try:
+                pids.append(int(line.strip()))
+            except ValueError:
+                pass
+        return pids
+
+    needle = f"--user-data-dir={path}"
+    try:
+        result = subprocess.run(
+            ["ps", "-axo", "pid=,command="],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=5,
+            env=child_env(),
+        )
+    except (OSError, subprocess.SubprocessError):
+        return []
+
+    pids = []
+    for line in (result.stdout or "").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        pid_text, _, command = line.partition(" ")
+        if _is_chrome_command(command, needle):
+            try:
+                pids.append(int(pid_text))
+            except ValueError:
+                pass
+    return pids
+
+
+def close() -> dict:
+    """Close Chrome processes using the dedicated profile, never the main one."""
+    pids = _chrome_pids()
+    closed = []
+    for pid in pids:
+        try:
+            if os.name == "nt":
+                subprocess.run(
+                    ["taskkill", "/F", "/T", "/PID", str(pid)],
+                    capture_output=True,
+                    env=child_env(),
+                    timeout=10,
+                )
+            else:
+                os.kill(pid, signal.SIGTERM)
+            closed.append(pid)
+        except (OSError, subprocess.SubprocessError):
+            pass
+    return {"ok": True, "closed": closed}
 
 
 def chrome_path() -> Optional[str]:
