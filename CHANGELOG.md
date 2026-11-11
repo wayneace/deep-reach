@@ -1,13 +1,15 @@
 # Changelog
 
-## Unreleased
+## v0.13.0 — 2026-11-11
+
+首次部署流程与 P1 浏览器生命周期。
 
 - `deep-reach setup` 现在是首次部署入口：先展示将创建/保留的文件，确认后从包内模板创建 `~/.deep-reach/keys.yaml`（0600），已有文件绝不覆盖。
 - 新增 `setup --dry-run` 和 `setup --yes`；非交互环境未加 `--yes` 时不做任何修改。
 - `setup` 不直接安装 OpenCLI，而是提示 agent 使用当前客户端的管理器（Cherry Studio 用 `cli_install`，recipe `npm:@jackwener/opencli`；普通环境用 npm）；`doctor` / `update` / OpenCLI 缺失错误使用同一套提示。
 - `setup` 汇总创建/保留的文件、仍为空的 key 及用途、扩展商店链接和 `profile launch/status/set` 步骤；不自动打开 Chrome。
 - P1 动作在专用 Chrome profile 未运行时自动启动它并等待扩展连接；动作结束后关闭专用 Chrome（只匹配专用 `user-data-dir`，不影响主浏览器）；首次安装扩展仍需 `profile launch`。
-- 测试数更新为 326。
+- 测试数更新为 327。
 
 ## v0.12.0 — 2026-11-11
 
