@@ -45,6 +45,7 @@ from .runtime import quota as quota_state
 from .runtime import state as state_store
 from .runtime.availability import (
     OPENCLI_BIN_ENV,
+    OPENCLI_CLIENT_HINT,
     OPENCLI_INSTALL_COMMAND,
     action_risk,
     channel_availability,
@@ -693,6 +694,7 @@ def cmd_update(args: argparse.Namespace) -> int:
     print(f"OpenCLI target version: {RECOMMENDED_VERSION}")
     print("Update OpenCLI with npm:")
     print(f"  {OPENCLI_INSTALL_COMMAND}@{RECOMMENDED_VERSION}")
+    print(f"  If your client manages CLIs, use its manager: {OPENCLI_CLIENT_HINT}")
     print("  or check: opencli --version")
     print("  or: deep-reach doctor   # compares installed vs recommended")
     if args.check:

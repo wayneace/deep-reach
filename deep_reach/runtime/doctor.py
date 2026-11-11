@@ -12,7 +12,7 @@ from ..channels.base import TIERS
 from ..channels.registry import Registry
 from . import health, quota
 from .availability import (
-    OPENCLI_INSTALL_COMMAND,
+    OPENCLI_CLIENT_HINT,
     _opencli_hint,
     action_risk,
     channel_availability,
@@ -54,7 +54,7 @@ def build_doctor_report(
             "recommended": RECOMMENDED_VERSION,
             "up_to_date": False,
             "action": (
-                f"OpenCLI is not installed; install it with: {OPENCLI_INSTALL_COMMAND}"
+                f"OpenCLI is not installed; {OPENCLI_CLIENT_HINT}"
                 if missing
                 else exc.message
             ),

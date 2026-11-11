@@ -26,6 +26,15 @@ from .keys import Keys, default_keys_path, template_path
 OPENCLI_BIN_ENV = "DEEP_REACH_OPENCLI_BIN"
 OPENCLI_PACKAGE = "@jackwener/opencli"
 OPENCLI_INSTALL_COMMAND = f"npm install -g {OPENCLI_PACKAGE}"
+OPENCLI_CLIENT_HINT = (
+    "install OpenCLI with your agent client's package manager "
+    f"(Cherry Studio: cli_install, recipe {OPENCLI_PACKAGE}; "
+    f"plain environment: {OPENCLI_INSTALL_COMMAND})"
+)
+OPENCLI_CLIENT_HINT_ZH = (
+    "用当前 agent 客户端的管理器安装 OpenCLI（Cherry Studio 用 cli_install，"
+    f"recipe {OPENCLI_PACKAGE}；普通环境用 {OPENCLI_INSTALL_COMMAND}）"
+)
 BROWSER_BRIDGE_URL = (
     "https://chromewebstore.google.com/detail/opencli/"
     "ildkmabpimmkaediidaifkhjpohdnifk"
@@ -220,7 +229,7 @@ def _bsk_hint(actions: tuple[str, ...], env: Optional[Environment]) -> str:
 def _opencli_hint(env: Optional[Environment]) -> str:
     if env is None or not env.opencli_installed:
         return (
-            f"安装 OpenCLI（`{OPENCLI_INSTALL_COMMAND}`），"
+            f"{OPENCLI_CLIENT_HINT_ZH}，"
             "然后运行 `deep-reach profile launch`，在专用窗口安装 OpenCLI "
             "Browser Bridge 扩展，再 `deep-reach profile set <contextId>`；"
             "完成后运行 `deep-reach doctor`"

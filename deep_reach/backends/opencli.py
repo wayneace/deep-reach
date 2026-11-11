@@ -15,7 +15,7 @@ import subprocess
 from typing import Optional
 
 from ..channels.base import BackendSpec, Channel
-from ..runtime.availability import OPENCLI_INSTALL_COMMAND, OPENCLI_PACKAGE
+from ..runtime.availability import OPENCLI_CLIENT_HINT, OPENCLI_PACKAGE
 from ..runtime.browser_config import normalize_opencli_profile
 from ..runtime.child_env import child_env
 from ..runtime.dispatch import BACKENDS
@@ -155,7 +155,7 @@ class OpenCLIClient:
         except FileNotFoundError as exc:
             raise ReachError(
                 NEED_SETUP,
-                f"opencli is not installed; install it with: {OPENCLI_INSTALL_COMMAND}",
+                f"opencli is not installed; {OPENCLI_CLIENT_HINT}",
             ) from exc
         try:
             stdout, stderr = proc.communicate(timeout=timeout)

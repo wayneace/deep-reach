@@ -157,6 +157,7 @@ class OpenCLIBackendTest(unittest.TestCase):
             client.version()
         self.assertEqual(ctx.exception.code, NEED_SETUP)
         self.assertIn("npm install -g @jackwener/opencli", ctx.exception.message)
+        self.assertIn("cli_install", ctx.exception.message)
 
     def test_no_profile_is_need_setup(self):
         client = OpenCLIClient(bin_path="fake-opencli", profile="")
