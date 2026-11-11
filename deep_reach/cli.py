@@ -62,6 +62,7 @@ from .runtime.setup import (
     build_setup_plan,
     format_setup_plan,
     format_setup_summary,
+    kept_results,
 )
 from .runtime.result import ReachError, dump, redact_text
 
@@ -495,7 +496,7 @@ def cmd_setup(args: argparse.Namespace) -> int:
 
     if not plan.create_dir and not plan.create_file:
         print()
-        print(format_setup_summary(plan, [], keys))
+        print(format_setup_summary(plan, kept_results(plan), keys))
         return 0
 
     if not getattr(args, "yes", False):

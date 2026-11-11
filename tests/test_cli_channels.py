@@ -159,6 +159,30 @@ class SetupDeploymentTest(unittest.TestCase):
             self.assertIn("cli_install", output)
             self.assertIn("npm:@jackwener/opencli", output)
 
+    def test_setup_existing_file_summary_shows_mode(self):
+        if os.name == "nt":
+            self.skipTest("POSIX permissions only")
+        with tempfile.TemporaryDirectory() as tmp:
+            key_path = Path(tmp) / "keys.yaml"
+            key_path.write_text("version: 1\n", encoding="utf-8")
+            key_path.chmod(0o644)
+            with mock.patch(
+                "deep_reach.cli._load_keys",
+                return_value=Keys({}, path=key_path),
+            ), mock.patch(
+                "deep_reach.runtime.setup.detect_opencli_version", return_value=""
+            ):
+                buffer = io.StringIO()
+                with redirect_stdout(buffer):
+                    code = cmd_setup(
+                        argparse.Namespace(dry_run=False, yes=False)
+                    )
+
+            output = buffer.getvalue()
+            self.assertEqual(code, 0)
+            self.assertIn("kept", output)
+            self.assertIn("644", output)
+
     def test_setup_dry_run_does_not_create_home(self):
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp) / "home"

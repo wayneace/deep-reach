@@ -16,7 +16,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from .availability import BROWSER_BRIDGE_URL, OPENCLI_CLIENT_HINT
+from .availability import (
+    BROWSER_BRIDGE_URL,
+    OPENCLI_BIN_ENV,
+    OPENCLI_CLIENT_HINT,
+)
 from .child_env import child_env
 from .keys import Keys, default_keys_path, template_path
 from .result import CONFIG_ERROR, ReachError, redact_text
@@ -68,7 +72,7 @@ class ActionResult:
 
 
 def detect_opencli_version() -> str:
-    bin_path = os.environ.get("DEEP_REACH_OPENCLI_BIN") or shutil.which("opencli")
+    bin_path = os.environ.get(OPENCLI_BIN_ENV) or shutil.which("opencli")
     if not bin_path:
         return ""
     try:
@@ -109,20 +113,11 @@ def apply_setup(plan: SetupPlan) -> list[ActionResult]:
     results: list[ActionResult] = []
     parent = plan.keys_path.parent
 
-    if plan.parent_is_canonical:
-        note = ensure_private_dir(parent)
-        status = "kept" if plan.parent_exists else "created"
-    elif plan.parent_exists:
-        note = ""
+    if plan.parent_exists:
+        note = ensure_private_dir(parent) if plan.parent_is_canonical else ""
         status = "kept"
     else:
-        try:
-            parent.mkdir(parents=True, exist_ok=True)
-        except OSError as exc:
-            raise ReachError(
-                CONFIG_ERROR, f"cannot create {parent}: {exc}"
-            ) from exc
-        note = ""
+        note = ensure_private_dir(parent)
         status = "created"
     results.append(ActionResult(status, parent, note))
 
@@ -140,6 +135,24 @@ def apply_setup(plan: SetupPlan) -> list[ActionResult]:
 
     _write_template(plan.keys_path)
     results.append(ActionResult("created", plan.keys_path))
+    return results
+
+
+def kept_results(plan: SetupPlan) -> list[ActionResult]:
+    """Describe paths that setup will leave alone, without touching them."""
+    results: list[ActionResult] = []
+    if plan.parent_exists:
+        results.append(ActionResult("kept", plan.keys_path.parent))
+    if plan.keys_is_symlink:
+        results.append(
+            ActionResult(
+                "skipped", plan.keys_path, "symlink; target not touched"
+            )
+        )
+    elif plan.keys_exists:
+        results.append(
+            ActionResult("kept", plan.keys_path, plan.keys.permission_note)
+        )
     return results
 
 
@@ -187,13 +200,13 @@ def format_setup_plan(plan: SetupPlan) -> str:
         creates.append(
             f"  {_display_path(plan.keys_path)}  from template, 0600"
         )
-    if plan.keys_exists:
-        keeps.append(
-            f"  {_display_path(plan.keys_path)}  already exists; not overwritten"
-        )
-    elif plan.keys_is_symlink:
+    if plan.keys_is_symlink:
         keeps.append(
             f"  {_display_path(plan.keys_path)}  symlink; target not touched"
+        )
+    elif plan.keys_exists:
+        keeps.append(
+            f"  {_display_path(plan.keys_path)}  already exists; not overwritten"
         )
 
     if creates:
@@ -218,7 +231,8 @@ def format_setup_plan(plan: SetupPlan) -> str:
         lines.append("OpenCLI: not installed")
         lines.append(f"  {OPENCLI_CLIENT_HINT}")
         lines.append(
-            f"  Recommended: npm install -g @jackwener/opencli@{RECOMMENDED_VERSION}"
+            "  Plain-environment install: "
+            f"npm install -g @jackwener/opencli@{RECOMMENDED_VERSION}"
         )
 
     return redact_text("\n".join(lines))

@@ -42,6 +42,33 @@ class SetupPlanTest(unittest.TestCase):
             self.assertFalse(plan.create_file)
             self.assertIn("keep", format_setup_plan(plan).lower())
 
+    def test_plan_describes_symlink_before_existing_target(self):
+        if os.name == "nt":
+            self.skipTest("symlink setup is POSIX-only in tests")
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "target.yaml"
+            target.write_text("version: 1\n", encoding="utf-8")
+            link = Path(tmp) / "keys.yaml"
+            link.symlink_to(target)
+            plan = build_setup_plan(Keys.load(link), opencli_version="")
+            text = format_setup_plan(plan)
+        self.assertIn("symlink", text)
+        self.assertNotIn("already exists", text)
+
+    def test_plan_uses_plain_environment_label(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "keys.yaml"
+            plan = build_setup_plan(Keys({}, path=path), opencli_version="")
+            text = format_setup_plan(plan)
+        self.assertIn("Plain-environment install:", text)
+        self.assertNotIn("Recommended:", text)
+
+    def test_detect_opencli_version_uses_shared_env_constant(self):
+        from deep_reach.runtime import setup as setup_module
+        from deep_reach.runtime.availability import OPENCLI_BIN_ENV
+
+        self.assertIs(setup_module.OPENCLI_BIN_ENV, OPENCLI_BIN_ENV)
+
 
 class SetupApplyTest(unittest.TestCase):
     def setUp(self):
@@ -112,6 +139,17 @@ class SetupApplyTest(unittest.TestCase):
                 apply_setup(plan)
             self.assertEqual(parent.stat().st_mode & 0o777, 0o700)
             self.assertEqual(sentinel.read_text(encoding="utf-8"), "keep")
+
+    def test_apply_creates_private_custom_parent(self):
+        if os.name == "nt":
+            self.skipTest("POSIX permissions only")
+        with tempfile.TemporaryDirectory() as tmp:
+            parent = Path(tmp) / "custom" / "deep-reach"
+            path = parent / "keys.yaml"
+            plan = build_setup_plan(Keys({}, path=path), opencli_version="")
+            self.assertTrue(plan.create_dir)
+            apply_setup(plan)
+            self.assertEqual(parent.stat().st_mode & 0o777, 0o700)
 
 
 class SetupSummaryTest(unittest.TestCase):
