@@ -12,6 +12,7 @@ import re
 import shutil
 import signal
 import subprocess
+import time
 from typing import Optional
 
 from ..channels.base import BackendSpec, Channel
@@ -88,6 +89,7 @@ class OpenCLIClient:
         bin_path: Optional[str] = None,
         profile: Optional[str] = None,
         window: str = "background",
+        auto_launch: bool = False,
     ):
         self.bin = (
             bin_path
@@ -97,7 +99,51 @@ class OpenCLIClient:
         )
         self.profile = normalize_opencli_profile(profile)
         self.window = window
+        self.auto_launch = auto_launch
+        self.connect_timeout = 15.0
         self._read_cache: dict[str, set[str]] = {}
+
+    def _binary_available(self) -> bool:
+        if os.path.isabs(self.bin):
+            return os.path.exists(self.bin)
+        return bool(shutil.which(self.bin))
+
+    def ensure_browser(self) -> None:
+        """Start the dedicated Chrome profile when a P1 action needs it."""
+        if not self.auto_launch or not self.profile:
+            return
+        if not self._binary_available():
+            return
+        if self.profile_status().get("connected"):
+            return
+
+        from ..runtime.profile import launch
+
+        result = launch(page="about:blank")
+        if not result.get("ok"):
+            raise ReachError(
+                NEED_SETUP,
+                "cannot launch the dedicated Chrome profile: "
+                f"{result.get('error', 'unknown error')}",
+                hint=(
+                    "Run `deep-reach profile launch` and make sure the OpenCLI "
+                    "extension is installed in that window."
+                ),
+            )
+
+        deadline = time.monotonic() + self.connect_timeout
+        while time.monotonic() < deadline:
+            time.sleep(0.5)
+            if self.profile_status().get("connected"):
+                return
+        raise ReachError(
+            NEED_SETUP,
+            "the dedicated Chrome profile did not connect",
+            hint=(
+                "Open the dedicated Chrome window and make sure the OpenCLI "
+                "extension is enabled; then run `deep-reach profile status`."
+            ),
+        )
 
     def _effective_profile(self) -> str:
         return self.profile
@@ -322,6 +368,7 @@ def make_opencli_handler(client: OpenCLIClient):
             raise ReachError(BAD_INPUT, f"{spec.label} is missing the opencli site option")
         command = str(spec.options.get("command") or action)
         args = _build_args(spec, params)
+        client.ensure_browser()
         data = client.run(str(site), command, args, timeout)
         return opencli_items(
             data,

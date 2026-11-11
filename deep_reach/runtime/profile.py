@@ -135,7 +135,7 @@ def chrome_path() -> Optional[str]:
     return None
 
 
-def launch() -> dict:
+def launch(page: str = "chrome://extensions") -> dict:
     chrome = chrome_path()
     if not chrome:
         return {"ok": False, "error": "Chrome not found; set CHROME_PATH or install Chrome"}
@@ -148,7 +148,7 @@ def launch() -> dict:
                 chrome,
                 f"--user-data-dir={path}",
                 "--profile-directory=Default",
-                "chrome://extensions",
+                page,
             ],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,

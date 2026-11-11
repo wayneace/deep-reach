@@ -92,7 +92,7 @@ def _as_bool(value, default: bool = True) -> bool:
 
 def _register_backends(keys: Keys) -> None:
     profile = normalize_opencli_profile(keys.get("browser.opencli_profile"))
-    register_opencli_backends(OpenCLIClient(profile=profile))
+    register_opencli_backends(OpenCLIClient(profile=profile, auto_launch=True))
     register_jina_backend(keys)
     register_tavily_backends(keys)
     register_brave_backend(keys)

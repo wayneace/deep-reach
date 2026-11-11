@@ -1,6 +1,7 @@
 import json
 import os
 import signal
+import sys
 import unittest
 from types import SimpleNamespace
 from unittest import mock
@@ -47,6 +48,91 @@ class FakeClient(OpenCLIClient):
             stderr="",
             returncode=1,
         )
+
+
+class OpenCLIAutoLaunchTest(unittest.TestCase):
+    def _client(self, profile="ctx-1234", auto_launch=True):
+        return OpenCLIClient(
+            bin_path=sys.executable,
+            profile=profile,
+            auto_launch=auto_launch,
+        )
+
+    def test_ensure_browser_skips_when_connected(self):
+        client = self._client()
+        with mock.patch.object(
+            client, "profile_status", return_value={"connected": True}
+        ), mock.patch("deep_reach.runtime.profile.launch") as launch:
+            client.ensure_browser()
+        launch.assert_not_called()
+
+    def test_ensure_browser_launches_dedicated_profile(self):
+        client = self._client()
+        with mock.patch.object(
+            client,
+            "profile_status",
+            side_effect=[{"connected": False}, {"connected": True}],
+        ), mock.patch(
+            "deep_reach.runtime.profile.launch", return_value={"ok": True}
+        ) as launch, mock.patch("deep_reach.backends.opencli.time.sleep"):
+            client.ensure_browser()
+        launch.assert_called_once_with(page="about:blank")
+
+    def test_ensure_browser_raises_when_launch_fails(self):
+        client = self._client()
+        with mock.patch.object(
+            client, "profile_status", return_value={"connected": False}
+        ), mock.patch(
+            "deep_reach.runtime.profile.launch",
+            return_value={"ok": False, "error": "chrome missing"},
+        ):
+            with self.assertRaises(ReachError) as ctx:
+                client.ensure_browser()
+        self.assertEqual(ctx.exception.code, NEED_SETUP)
+        self.assertIn("chrome missing", ctx.exception.message)
+
+    def test_ensure_browser_raises_after_timeout(self):
+        client = self._client()
+        client.connect_timeout = 0
+        with mock.patch.object(
+            client, "profile_status", return_value={"connected": False}
+        ), mock.patch(
+            "deep_reach.runtime.profile.launch", return_value={"ok": True}
+        ):
+            with self.assertRaises(ReachError) as ctx:
+                client.ensure_browser()
+        self.assertEqual(ctx.exception.code, NEED_SETUP)
+
+    def test_ensure_browser_skips_without_profile(self):
+        client = self._client(profile="")
+        with mock.patch.object(client, "profile_status") as status, mock.patch(
+            "deep_reach.runtime.profile.launch"
+        ) as launch:
+            client.ensure_browser()
+        status.assert_not_called()
+        launch.assert_not_called()
+
+    def test_ensure_browser_skips_without_opencli(self):
+        client = OpenCLIClient(
+            bin_path="/no/such/opencli", profile="ctx-1234", auto_launch=True
+        )
+        with mock.patch.object(client, "profile_status") as status, mock.patch(
+            "deep_reach.runtime.profile.launch"
+        ) as launch:
+            client.ensure_browser()
+        status.assert_not_called()
+        launch.assert_not_called()
+
+    def test_ensure_browser_is_off_by_default(self):
+        client = OpenCLIClient(
+            bin_path=sys.executable, profile="ctx-1234"
+        )
+        with mock.patch.object(client, "profile_status") as status, mock.patch(
+            "deep_reach.runtime.profile.launch"
+        ) as launch:
+            client.ensure_browser()
+        status.assert_not_called()
+        launch.assert_not_called()
 
 
 class OpenCLIBackendTest(unittest.TestCase):

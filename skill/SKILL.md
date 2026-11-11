@@ -35,7 +35,7 @@ uv run deep-reach capabilities <channel>
 uv run deep-reach state
 ```
 
-- 首次运行先执行 `setup`；它只创建 keys 文件并打印下一步，不启动 Chrome。OpenCLI 缺失时，用当前 agent 客户端的管理器安装（Cherry Studio 用 `cli_install`，recipe `npm:@jackwener/opencli`；普通环境用 npm），再执行 `profile launch`。
+- 首次运行先执行 `setup`；它只创建 keys 文件并打印下一步，不启动 Chrome。OpenCLI 缺失时，用当前 agent 客户端的管理器安装（Cherry Studio 用 `cli_install`，recipe `npm:@jackwener/opencli`；普通环境用 npm），再执行 `profile launch` 安装扩展。绑定后 P1 动作会自动启动专用 Chrome profile 并等待扩展连接，不需要每次手动打开。
 - `doctor` 告诉你哪些渠道可用、缺什么、下一步做什么。
 - `tiers` 显示分层定义和每个渠道的层级覆盖。
 - `channels` 显示已实现渠道，`status` 是当前环境实测值。

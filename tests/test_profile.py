@@ -89,6 +89,19 @@ class ProfileTest(unittest.TestCase):
         self.assertNotIn("DEEP_REACH_OFFICIAL_GITHUB_TOKEN", env)
         self.assertEqual(directory.stat().st_mode & 0o777, 0o700)
 
+    def test_profile_launch_can_open_about_blank(self):
+        fake = mock.Mock(pid=1234)
+        directory = Path(tempfile.mkdtemp())
+        with mock.patch(
+            "deep_reach.runtime.profile.chrome_path", return_value="/chrome"
+        ), mock.patch(
+            "deep_reach.runtime.profile.profile_dir", return_value=directory
+        ), mock.patch(
+            "deep_reach.runtime.profile.subprocess.Popen", return_value=fake
+        ) as popen:
+            launch(page="about:blank")
+        self.assertEqual(popen.call_args.args[0][-1], "about:blank")
+
     def test_set_context_preserves_symlink_target(self):
         if os.name == "nt":
             self.skipTest("symlinks need privileges on Windows")
