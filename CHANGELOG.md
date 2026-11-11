@@ -6,7 +6,7 @@
 - 新增 `setup --dry-run` 和 `setup --yes`；非交互环境未加 `--yes` 时不做任何修改。
 - `setup` 不直接安装 OpenCLI，而是提示 agent 使用当前客户端的管理器（Cherry Studio 用 `cli_install`，recipe `npm:@jackwener/opencli`；普通环境用 npm）；`doctor` / `update` / OpenCLI 缺失错误使用同一套提示。
 - `setup` 汇总创建/保留的文件、仍为空的 key 及用途、扩展商店链接和 `profile launch/status/set` 步骤；不自动打开 Chrome。
-- 测试数更新为 299。
+- 测试数更新为 307。
 
 ## v0.12.0 — 2026-11-11
 

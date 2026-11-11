@@ -203,10 +203,12 @@ class DoctorEnvironmentTest(unittest.TestCase):
         self.assertIn("not installed", text)
         self.assertIn("npm install -g @jackwener/opencli", text)
         self.assertIn("cli_install", text)
+        self.assertIn("npm:@jackwener/opencli", text)
         self.assertTrue(report["opencli"]["missing"])
         rows = {row["name"]: row for row in report["channels"]}
         self.assertIn("npm install -g @jackwener/opencli", rows["weibo"]["next_action"])
         self.assertIn("cli_install", rows["weibo"]["next_action"])
+        self.assertIn("npm:@jackwener/opencli", rows["weibo"]["next_action"])
 
     def test_configured_profile_without_binary_keeps_install_hint(self):
         keys = Keys({"browser": {"opencli_profile": "ctx-1234"}})

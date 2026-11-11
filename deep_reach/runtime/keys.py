@@ -58,11 +58,15 @@ class Keys:
         _register_secrets(self.data)
 
     @classmethod
-    def load(cls, path: Optional[str | Path] = None) -> "Keys":
+    def load(
+        cls, path: Optional[str | Path] = None, *, tighten: bool = True
+    ) -> "Keys":
         p = Path(path).expanduser() if path else default_keys_path()
-        notes = [tighten_file(p)]
-        if p.parent == Path.home() / ".deep-reach":
-            notes.append(ensure_private_dir(p.parent))
+        notes = []
+        if tighten:
+            notes.append(tighten_file(p))
+            if p.parent == Path.home() / ".deep-reach":
+                notes.append(ensure_private_dir(p.parent))
         note = "; ".join(item for item in notes if item)
         if not p.exists():
             keys = cls({}, p)

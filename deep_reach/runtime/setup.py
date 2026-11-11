@@ -12,7 +12,6 @@ import os
 import shutil
 import stat
 import subprocess
-import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -153,21 +152,24 @@ def _write_template(path: Path) -> None:
             CONFIG_ERROR, f"cannot read template {source}: {exc}"
         ) from exc
 
-    fd, temp_name = tempfile.mkstemp(dir=str(path.parent), prefix="keys-")
+    try:
+        fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    except OSError as exc:
+        raise ReachError(CONFIG_ERROR, f"cannot create {path}: {exc}") from exc
+
     try:
         with os.fdopen(fd, "wb") as handle:
             handle.write(data)
             handle.flush()
             os.fsync(handle.fileno())
         if os.name != "nt":
-            os.chmod(temp_name, 0o600)
-        os.replace(temp_name, path)
-    except Exception:
+            os.chmod(path, 0o600)
+    except OSError as exc:
         try:
-            os.unlink(temp_name)
+            os.unlink(path)
         except OSError:
             pass
-        raise
+        raise ReachError(CONFIG_ERROR, f"cannot write {path}: {exc}") from exc
 
 
 def format_setup_plan(plan: SetupPlan) -> str:

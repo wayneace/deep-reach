@@ -77,8 +77,8 @@ def _ensure_utf8() -> None:
                 pass
 
 
-def _load_keys() -> Keys:
-    return Keys.load()
+def _load_keys(tighten: bool = True) -> Keys:
+    return Keys.load(tighten=tighten)
 
 
 def _as_bool(value, default: bool = True) -> bool:
@@ -482,7 +482,7 @@ def cmd_state(args: argparse.Namespace) -> int:
 
 def cmd_setup(args: argparse.Namespace) -> int:
     try:
-        keys = _load_keys()
+        keys = _load_keys(tighten=False)
     except ReachError as exc:
         print(f"CONFIG_ERROR: {exc.message}", file=sys.stderr)
         return 2
@@ -503,7 +503,12 @@ def cmd_setup(args: argparse.Namespace) -> int:
             print()
             print("No changes made. Re-run with --yes after confirming.")
             return 2
-        answer = input("Proceed with file setup? [y/N] ")
+        try:
+            answer = input("Proceed with file setup? [y/N] ")
+        except (EOFError, KeyboardInterrupt):
+            print()
+            print("No changes made.")
+            return 2
         if answer.strip().lower() not in ("y", "yes"):
             print("No changes made.")
             return 2

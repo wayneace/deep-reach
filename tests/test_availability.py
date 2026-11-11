@@ -235,6 +235,7 @@ class AvailabilityTest(unittest.TestCase):
         hint = next_action_for(ch, result, environment)
         self.assertIn("npm install -g @jackwener/opencli", hint)
         self.assertIn("cli_install", hint)
+        self.assertIn("npm:@jackwener/opencli", hint)
         self.assertIn("deep-reach doctor", hint)
 
     def test_next_action_for_disconnected_browser_mentions_extension(self):

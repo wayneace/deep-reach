@@ -5,7 +5,7 @@ from pathlib import Path
 from unittest import mock
 
 from deep_reach.runtime.keys import Keys, template_path
-from deep_reach.runtime.result import clear_secrets
+from deep_reach.runtime.result import CONFIG_ERROR, ReachError, clear_secrets
 from deep_reach.runtime.setup import (
     apply_setup,
     build_setup_plan,
@@ -84,6 +84,34 @@ class SetupApplyTest(unittest.TestCase):
             results = apply_setup(plan)
             self.assertEqual(target.read_text(encoding="utf-8"), "version: 1\n")
             self.assertEqual(results[-1].status, "skipped")
+
+    def test_apply_refuses_to_overwrite_file_created_after_plan(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "keys.yaml"
+            plan = build_setup_plan(Keys({}, path=path), opencli_version="")
+            path.write_text("created-by-someone-else\n", encoding="utf-8")
+            with self.assertRaises(ReachError) as ctx:
+                apply_setup(plan)
+            self.assertEqual(ctx.exception.code, CONFIG_ERROR)
+            self.assertEqual(
+                path.read_text(encoding="utf-8"), "created-by-someone-else\n"
+            )
+
+    def test_apply_tightens_existing_directory_without_deleting(self):
+        if os.name == "nt":
+            self.skipTest("POSIX permissions only")
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            parent = home / ".deep-reach"
+            parent.mkdir(mode=0o755, parents=True)
+            sentinel = parent / "keep.txt"
+            sentinel.write_text("keep", encoding="utf-8")
+            path = parent / "keys.yaml"
+            with mock.patch("deep_reach.runtime.setup.Path.home", return_value=home):
+                plan = build_setup_plan(Keys({}, path=path), opencli_version="")
+                apply_setup(plan)
+            self.assertEqual(parent.stat().st_mode & 0o777, 0o700)
+            self.assertEqual(sentinel.read_text(encoding="utf-8"), "keep")
 
 
 class SetupSummaryTest(unittest.TestCase):
