@@ -715,10 +715,26 @@ def cmd_update(args: argparse.Namespace) -> int:
         else:
             print("  latest on npm: unavailable (npm missing or offline)")
     print()
-    print("Project update:")
-    print("  cd <deep-reach project>")
-    print("  git pull")
-    print("  uv sync")
+    print("Deep-Reach update:")
+    print("  Cherry Studio:")
+    print("    cli_install  recipe=pipx:wayneace/deep-reach  version=<latest>")
+    print("  Installed CLI (Codex / Claude Code / generic):")
+    print(
+        '    uv tool install --force '
+        '"git+https://github.com/wayneace/deep-reach@<version>"'
+    )
+    print(
+        '    # or: pipx install --force '
+        '"git+https://github.com/wayneace/deep-reach@<version>"'
+    )
+    print("  Source checkout:")
+    print("    cd <deep-reach project>")
+    print("    git pull")
+    print("    uv sync")
+    print()
+    print("Skill update:")
+    print("  Cherry Studio: check for updates in the skill marketplace")
+    print("  CLI-installed skill: deep-reach skill install --dest <skills-dir>")
     print()
     print("Then run: deep-reach doctor")
     return 0
