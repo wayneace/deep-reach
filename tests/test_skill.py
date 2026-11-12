@@ -4,8 +4,15 @@ import shutil
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
-from deep_reach.runtime.skill import skill_dir, skill_status
+from deep_reach.runtime.result import ReachError
+from deep_reach.runtime.skill import (
+    apply_install,
+    build_install_plan,
+    skill_dir,
+    skill_status,
+)
 
 
 def _install_copy(dest: Path) -> Path:
@@ -124,6 +131,118 @@ class SkillStatusTest(unittest.TestCase):
             status = skill_status(dest)
         self.assertTrue(status["legacy"])
         self.assertEqual(status["state"], "missing")
+
+
+class SkillInstallTest(unittest.TestCase):
+    def test_plan_actions(self):
+        cases = {
+            "missing": "create",
+            "current": "none",
+            "ahead": "none",
+            "outdated": "replace",
+            "modified": "replace",
+            "incomplete": "replace",
+            "invalid": "refuse",
+            "symlink": "refuse",
+        }
+        for state, action in cases.items():
+            with self.subTest(state=state):
+                with tempfile.TemporaryDirectory() as tmp:
+                    dest = Path(tmp)
+                    target = dest / "deep-reach"
+                    if state == "missing":
+                        pass
+                    elif state == "invalid":
+                        target.write_text("x", encoding="utf-8")
+                    elif state == "symlink":
+                        if os.name == "nt":
+                            continue
+                        real = dest / "real"
+                        real.mkdir()
+                        target.symlink_to(real, target_is_directory=True)
+                    else:
+                        _install_copy(dest)
+                        if state == "current":
+                            pass
+                        elif state == "ahead":
+                            _set_version(target, "99.0.0")
+                        elif state == "outdated":
+                            _set_version(target, "0.0.1")
+                        elif state == "modified":
+                            (target / "extra.md").write_text("x", encoding="utf-8")
+                        elif state == "incomplete":
+                            (target / "references" / "capabilities.md").unlink()
+                    self.assertEqual(build_install_plan(dest)["action"], action)
+
+    def test_apply_creates_named_dir(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = Path(tmp)
+            plan = build_install_plan(dest)
+            result = apply_install(plan)
+            self.assertTrue((dest / "deep-reach" / "SKILL.md").is_file())
+            self.assertFalse((dest / "skill").exists())
+            self.assertTrue(result["written"])
+
+    def test_apply_creates_missing_parent(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = Path(tmp) / "clients" / "cherry"
+            apply_install(build_install_plan(dest))
+            self.assertTrue((dest / "deep-reach" / "SKILL.md").is_file())
+
+    def test_apply_preserves_siblings(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = Path(tmp)
+            (dest / "other").mkdir()
+            (dest / "other" / "keep.txt").write_text("keep", encoding="utf-8")
+            apply_install(build_install_plan(dest))
+            self.assertEqual((dest / "other" / "keep.txt").read_text(), "keep")
+
+    def test_apply_replaces_and_removes_stale_files(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = Path(tmp)
+            target = _install_copy(dest)
+            _set_version(target, "0.0.1")
+            (target / "extra.md").write_text("old", encoding="utf-8")
+            apply_install(build_install_plan(dest))
+            self.assertFalse((target / "extra.md").exists())
+            self.assertEqual(skill_status(dest)["state"], "current")
+
+    def test_apply_noop_current(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = Path(tmp)
+            _install_copy(dest)
+            result = apply_install(build_install_plan(dest))
+            self.assertFalse(result["written"])
+
+    def test_apply_refuses_invalid_and_symlink(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = Path(tmp)
+            (dest / "deep-reach").write_text("x", encoding="utf-8")
+            with self.assertRaises(ReachError):
+                apply_install(build_install_plan(dest))
+        if os.name != "nt":
+            with tempfile.TemporaryDirectory() as tmp:
+                dest = Path(tmp)
+                real = dest / "real"
+                real.mkdir()
+                (dest / "deep-reach").symlink_to(real, target_is_directory=True)
+                with self.assertRaises(ReachError):
+                    apply_install(build_install_plan(dest))
+
+    def test_copy_failure_leaves_target_untouched(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = Path(tmp)
+            target = _install_copy(dest)
+            _set_version(target, "0.0.1")
+            before = (target / "SKILL.md").read_text(encoding="utf-8")
+            plan = build_install_plan(dest)
+            with mock.patch(
+                "deep_reach.runtime.skill.shutil.copytree",
+                side_effect=OSError("disk full"),
+            ):
+                with self.assertRaises(OSError):
+                    apply_install(plan)
+            self.assertEqual((target / "SKILL.md").read_text(encoding="utf-8"), before)
 
 
 if __name__ == "__main__":

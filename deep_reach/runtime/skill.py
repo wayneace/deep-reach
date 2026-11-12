@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import re
+import shutil
+import tempfile
 from importlib import resources
 from pathlib import Path
 from typing import Optional
 
 import yaml
+
+from .result import BAD_INPUT, ReachError
 
 SKILL_NAME = "deep-reach"
 SKILL_PACKAGE = "deep_reach.data"
@@ -121,3 +126,100 @@ def skill_status(dest: Path) -> dict:
     result["diff"] = diff[:20]
     result["diff_count"] = len(diff)
     return result
+
+
+def build_install_plan(dest: Path) -> dict:
+    status = skill_status(dest)
+    actions = {
+        "missing": "create",
+        "current": "none",
+        "ahead": "none",
+        "outdated": "replace",
+        "modified": "replace",
+        "incomplete": "replace",
+        "invalid": "refuse",
+        "symlink": "refuse",
+    }
+    return {**status, "action": actions[status["state"]]}
+
+
+def apply_install(plan: dict) -> dict:
+    target = Path(plan["target"])
+    if plan["action"] == "none":
+        return {
+            "ok": True,
+            "target": str(target),
+            "state": plan["state"],
+            "written": False,
+            "files": [],
+        }
+    if plan["action"] == "refuse":
+        raise ReachError(
+            BAD_INPUT,
+            f"refusing to install over {plan['state']} target: {target}",
+        )
+    parent = target.parent
+    parent.mkdir(parents=True, exist_ok=True)
+    temp = Path(tempfile.mkdtemp(prefix=".deep-reach-skill-", dir=str(parent)))
+    backup = parent / f".deep-reach-skill-backup-{os.getpid()}"
+    try:
+        staged = temp / "skill"
+        shutil.copytree(skill_dir(), staged)
+        if target.exists() or target.is_symlink():
+            if backup.exists():
+                shutil.rmtree(backup)
+            os.replace(target, backup)
+        try:
+            os.replace(staged, target)
+        except Exception:
+            if backup.exists():
+                os.replace(backup, target)
+            raise
+        if backup.exists():
+            shutil.rmtree(backup, ignore_errors=True)
+    finally:
+        shutil.rmtree(temp, ignore_errors=True)
+    return {
+        "ok": True,
+        "target": str(target),
+        "state": "current",
+        "written": True,
+        "files": sorted(_skill_files(target)),
+    }
+
+
+def format_skill_status(status: dict) -> str:
+    lines = [
+        f"skill: {status['target']}",
+        f"state: {status['state']}",
+        f"installed: {status['installed_version'] or '-'}",
+        f"packaged: {status['packaged_version']}",
+    ]
+    if status["legacy"]:
+        lines.append("legacy: <dest>/skill exists; not removed")
+    if status["diff"]:
+        lines.append("diff: " + ", ".join(status["diff"]))
+    return "\n".join(lines)
+
+
+def format_install_plan(plan: dict) -> str:
+    lines = [
+        "Deep-Reach skill install",
+        f"  target: {plan['target']}",
+        f"  state: {plan['state']}",
+        f"  action: {plan['action']}",
+    ]
+    if plan["legacy"]:
+        lines.append("  legacy: <dest>/skill exists; not removed")
+    return "\n".join(lines)
+
+
+def format_install_result(result: dict) -> str:
+    if not result["written"]:
+        if result["state"] == "ahead":
+            return (
+                "installed skill is newer than this CLI; "
+                f"not downgrading: {result['target']}"
+            )
+        return f"skill already current: {result['target']}"
+    return f"installed skill: {result['target']} ({len(result['files'])} files)"
