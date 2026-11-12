@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.14.1 — 2026-11-12
+
+安装文档与分发路径。
+
+- 新增 `docs/install.md`：Cherry Studio / Codex / Claude Code / 通用客户端的安装矩阵、首次配置、验证和更新。
+- README 增加“安装（给别人用）”，把源码开发路径与分发安装分开。
+- `SKILL.md` 与 `setup` summary 改为 marketplace-first；CLI `skill install` 作为 fallback。
+- `deep-reach update` 分别说明 Cherry、安装版 CLI、源码版和 skill 的更新方式。
+- 测试数更新为 378。
+
 ## v0.14.0 — 2026-11-12
 
 Skill 入口与触发优化。

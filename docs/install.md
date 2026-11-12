@@ -35,7 +35,7 @@ P1（公开网页 / OpenCLI）还需要 OpenCLI 和 Chrome 扩展。
 让 agent 调用 Cherry 的 CLI 管理器：
 
 ```text
-cli_install(name="deep-reach", tool="pipx:wayneace/deep-reach", requestedVersion="v0.14.0")
+cli_install(name="deep-reach", tool="pipx:wayneace/deep-reach", requestedVersion="v0.14.1")
 ```
 
 没有 `cli_install` 工具时，用 Cherry 的 CLI 管理界面添加同一个 recipe 和版本。
@@ -82,7 +82,7 @@ deep-reach doctor
 ### 1. 安装 CLI
 
 ```bash
-uv tool install "git+https://github.com/wayneace/deep-reach@v0.14.0"
+uv tool install "git+https://github.com/wayneace/deep-reach@v0.14.1"
 ```
 
 如果 `uv` 不存在，先安装 uv：
@@ -125,7 +125,7 @@ npm install -g @jackwener/opencli@2.0.3
 同 Codex：
 
 ```bash
-uv tool install "git+https://github.com/wayneace/deep-reach@v0.14.0"
+uv tool install "git+https://github.com/wayneace/deep-reach@v0.14.1"
 ```
 
 ### 2. 安装 skill
@@ -155,7 +155,7 @@ npm install -g @jackwener/opencli@2.0.3
 ## 其他 agent 客户端
 
 ```bash
-uv tool install "git+https://github.com/wayneace/deep-reach@v0.14.0"
+uv tool install "git+https://github.com/wayneace/deep-reach@v0.14.1"
 deep-reach skill install --dest <client skills directory> --yes
 ```
 

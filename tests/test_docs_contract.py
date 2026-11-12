@@ -56,6 +56,10 @@ class DocsContractTest(unittest.TestCase):
         text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
         self.assertIn("v0.14.0", text)
 
+    def test_changelog_has_v0141(self):
+        text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+        self.assertIn("v0.14.1", text)
+
 
 SKILL = ROOT / "deep_reach" / "data" / "skill" / "SKILL.md"
 
