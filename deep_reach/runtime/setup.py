@@ -286,6 +286,17 @@ def format_setup_summary(
     step += 1
     lines.append(f"  {step}. deep-reach doctor")
 
+    lines.append("")
+    lines.append("Skill:")
+    lines.append(
+        "  install: deep-reach skill install --dest "
+        "<your client's skills directory>"
+    )
+    lines.append(
+        "  check:   deep-reach skill status --dest "
+        "<your client's skills directory>"
+    )
+
     return redact_text("\n".join(lines))
 
 

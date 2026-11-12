@@ -9,7 +9,7 @@ description: |
   写操作仅在用户明确要求时执行；付费 API、Amazon 关键词量/流量数据不在范围内。
 metadata:
   homepage: https://github.com/wayneace/deep-reach
-  version: "0.13.0"
+  version: "0.14.0"
 ---
 
 # Deep-Reach

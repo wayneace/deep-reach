@@ -20,6 +20,8 @@ import yaml
 EXPECTED_VISIBLE = 21
 REGISTRY_SUFFIX = "deep_reach/data/channels.yaml"
 KEYS_TEMPLATE_SUFFIX = "deep_reach/data/keys.example.yaml"
+SKILL_SUFFIX = "deep_reach/data/skill/SKILL.md"
+SKILL_CAPS_SUFFIX = "deep_reach/data/skill/references/capabilities.md"
 
 
 def main() -> int:
@@ -55,6 +57,25 @@ def main() -> int:
                 file=sys.stderr,
             )
             return 1
+        skill_matches = [
+            name for name in archive.namelist() if name.endswith(SKILL_SUFFIX)
+        ]
+        if len(skill_matches) != 1:
+            print(
+                f"{wheel}: expected one {SKILL_SUFFIX}, found {len(skill_matches)}",
+                file=sys.stderr,
+            )
+            return 1
+        caps_matches = [
+            name for name in archive.namelist() if name.endswith(SKILL_CAPS_SUFFIX)
+        ]
+        if len(caps_matches) != 1:
+            print(
+                f"{wheel}: expected one {SKILL_CAPS_SUFFIX}, "
+                f"found {len(caps_matches)}",
+                file=sys.stderr,
+            )
+            return 1
 
     channels = {
         str(name): (spec or {}) for name, spec in (data.get("channels") or {}).items()
@@ -80,7 +101,9 @@ def main() -> int:
         )
         return 1
 
-    print(f"{wheel}: {len(visible)} visible channels + keys template packaged")
+    print(
+        f"{wheel}: {len(visible)} visible channels + keys template + skill packaged"
+    )
     return 0
 
 

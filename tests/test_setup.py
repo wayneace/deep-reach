@@ -172,6 +172,14 @@ class SetupSummaryTest(unittest.TestCase):
         self.assertNotIn("secret-value", text)
         self.assertIn("chromewebstore.google.com", text)
 
+    def test_summary_mentions_skill_install(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "keys.yaml"
+            plan = build_setup_plan(Keys({}, path=path), opencli_version="")
+            text = format_setup_summary(plan, [], plan.keys)
+        self.assertIn("Skill:", text)
+        self.assertIn("deep-reach skill install --dest", text)
+
 
 if __name__ == "__main__":
     unittest.main()

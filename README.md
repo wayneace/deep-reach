@@ -9,7 +9,7 @@
 
 ## 状态
 
-- 版本 **0.13.0**；327 个单元测试。
+- 版本 **0.14.0**；363 个单元测试。
 - 21 个可见渠道，10 个有 P0 覆盖；8 个 default 渠道 live smoke 通过（P0/P1，未含 P3）。
 - `channels` / `doctor` 的 `status` 是**当前环境实测值**（`ready` / `degraded` / `fallback` / `needs_setup` / `needs_login` / `needs_key` / `experimental`）；`declared_status` 保留注册表声明。
 - 可读可写：写操作由动作声明决定；P3 bsk 可执行写操作，调用方需确认用户意图。
@@ -189,6 +189,19 @@ P2 搜索/阅读（按顺序降级，缺 key 自动跳过）：
 `web read` 顺序：`http-read` → Jina → Firecrawl → Tavily Extract → Bright Data Web Unlocker。
 
 后端可以单独声明 key（`backend.key`），用于同一渠道不同层使用不同 key 的情况。
+
+## Agent skill
+
+Skill 随 wheel 打包，安装到客户端的 skills 目录：
+
+```bash
+deep-reach skill path
+deep-reach skill install --dest <skills-dir>
+deep-reach skill status --dest <skills-dir>
+```
+
+安装目标是 `<skills-dir>/deep-reach/`，不会写到 `<skills-dir>/skill/`，也不会自动删除旧的
+`<skills-dir>/skill/`。确认新 skill 可用后，由用户手动处理旧目录。
 
 ## 浏览器与 profile
 

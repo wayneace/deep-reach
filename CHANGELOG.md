@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.14.0 — 2026-11-12
+
+Skill 入口与触发优化。
+
+- Skill 移入 `deep_reach/data/skill/` 并随 wheel 打包；新增 `deep-reach skill path|show|status|install`，安装到 `<skills-dir>/deep-reach/`。
+- `skill status` 比较安装版本与包版本，区分 missing/invalid/symlink/incomplete/ahead/outdated/modified/current；`install` 使用临时目录 + 原子替换，不降级，不删除旧的 `<skills-dir>/skill/`。
+- Skill description 改为“普通公开网页优先用内置工具”，增加选择路由表、P3 回退分组、完整错误表（含 `UPSTREAM_BROKEN` / `QUOTA_EXHAUSTED` / `CONFIG_ERROR`）和登录/浏览器边界。
+- Skill 示例统一使用安装版 `deep-reach`；源码仓库只说明用 uv 运行同一 CLI。
+- `setup` 汇总增加 skill 安装/检查提示。
+- 测试数更新为 363。
+
 ## v0.13.0 — 2026-11-11
 
 首次部署流程与 P1 浏览器生命周期。
