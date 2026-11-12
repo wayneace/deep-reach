@@ -10,7 +10,7 @@ from pathlib import Path
 from unittest import mock
 
 from deep_reach.cli import main
-from deep_reach.runtime.result import ReachError
+from deep_reach.runtime.result import BAD_INPUT, CONFIG_ERROR, ReachError
 from deep_reach.runtime.skill import (
     apply_install,
     build_install_plan,
@@ -56,7 +56,7 @@ class SkillStatusTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             status = skill_status(Path(tmp))
         self.assertEqual(status["state"], "missing")
-        self.assertTrue(status["target"].endswith("/deep-reach"))
+        self.assertEqual(Path(status["target"]).name, "deep-reach")
 
     def test_current(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -135,6 +135,57 @@ class SkillStatusTest(unittest.TestCase):
             status = skill_status(dest)
         self.assertTrue(status["legacy"])
         self.assertEqual(status["state"], "missing")
+
+    def test_ahead_with_missing_file_is_still_ahead(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = Path(tmp)
+            target = _install_copy(dest)
+            _set_version(target, "99.0.0")
+            (target / "references" / "capabilities.md").unlink()
+            status = skill_status(dest)
+            plan = build_install_plan(dest)
+        self.assertEqual(status["state"], "ahead")
+        self.assertEqual(plan["action"], "none")
+
+    def test_status_dest_is_file_raises_bad_input(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = Path(tmp) / "skills"
+            dest.write_text("not a directory", encoding="utf-8")
+            with self.assertRaises(ReachError) as ctx:
+                skill_status(dest)
+        self.assertEqual(ctx.exception.code, BAD_INPUT)
+
+    def test_status_unreadable_skill_raises_reach_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = Path(tmp)
+            _install_copy(dest)
+            with mock.patch(
+                "pathlib.Path.read_text",
+                side_effect=PermissionError("denied"),
+            ):
+                with self.assertRaises(ReachError) as ctx:
+                    skill_status(dest)
+        self.assertEqual(ctx.exception.code, CONFIG_ERROR)
+
+    def test_scalar_frontmatter_is_modified(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = Path(tmp)
+            target = _install_copy(dest)
+            (target / "SKILL.md").write_text(
+                "---\njust a string\n---\n", encoding="utf-8"
+            )
+            status = skill_status(dest)
+        self.assertEqual(status["state"], "modified")
+
+    def test_non_dict_metadata_is_modified(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = Path(tmp)
+            target = _install_copy(dest)
+            (target / "SKILL.md").write_text(
+                "---\nmetadata:\n  - a\n---\n", encoding="utf-8"
+            )
+            status = skill_status(dest)
+        self.assertEqual(status["state"], "modified")
 
 
 class SkillInstallTest(unittest.TestCase):
@@ -244,9 +295,21 @@ class SkillInstallTest(unittest.TestCase):
                 "deep_reach.runtime.skill.shutil.copytree",
                 side_effect=OSError("disk full"),
             ):
-                with self.assertRaises(OSError):
+                with self.assertRaises(ReachError) as ctx:
                     apply_install(plan)
+            self.assertEqual(ctx.exception.code, CONFIG_ERROR)
             self.assertEqual((target / "SKILL.md").read_text(encoding="utf-8"), before)
+
+    def test_apply_wraps_mkdtemp_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = Path(tmp)
+            with mock.patch(
+                "deep_reach.runtime.skill.tempfile.mkdtemp",
+                side_effect=PermissionError("denied"),
+            ):
+                with self.assertRaises(ReachError) as ctx:
+                    apply_install(build_install_plan(dest))
+            self.assertEqual(ctx.exception.code, CONFIG_ERROR)
 
 
 def _run(*args: str) -> tuple[int, str]:
@@ -260,14 +323,14 @@ class SkillCliTest(unittest.TestCase):
     def test_path_text(self):
         code, out = _run("skill", "path")
         self.assertEqual(code, 0)
-        self.assertIn("deep-reach", out)
+        self.assertEqual(out.strip(), str(skill_dir()))
 
     def test_path_json(self):
         code, out = _run("skill", "path", "--json")
         self.assertEqual(code, 0)
         data = json.loads(out)
         self.assertTrue(data["ok"])
-        self.assertTrue(data["path"].endswith("skill"))
+        self.assertEqual(Path(data["path"]).name, "skill")
 
     def test_show_text(self):
         code, out = _run("skill", "show")
@@ -286,6 +349,20 @@ class SkillCliTest(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(json.loads(out)["state"], "missing")
 
+    def test_status_dest_file_returns_2(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = Path(tmp) / "skills"
+            dest.write_text("not a directory", encoding="utf-8")
+            code, _ = _run("skill", "status", "--dest", str(dest))
+        self.assertEqual(code, 2)
+
+    def test_install_dest_file_returns_2(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = Path(tmp) / "skills"
+            dest.write_text("not a directory", encoding="utf-8")
+            code, _ = _run("skill", "install", "--dest", str(dest), "--yes")
+        self.assertEqual(code, 2)
+
     def test_install_dry_run(self):
         with tempfile.TemporaryDirectory() as tmp:
             code, _ = _run("skill", "install", "--dest", tmp, "--dry-run")
@@ -299,6 +376,26 @@ class SkillCliTest(unittest.TestCase):
             code, _ = _run("skill", "install", "--dest", tmp)
             self.assertEqual(code, 2)
             self.assertFalse((Path(tmp) / "deep-reach").exists())
+
+    def test_install_json_non_interactive_returns_error_envelope(self):
+        with tempfile.TemporaryDirectory() as tmp, mock.patch(
+            "sys.stdin.isatty", return_value=False
+        ):
+            code, out = _run("skill", "install", "--dest", tmp, "--json")
+        self.assertEqual(code, 2)
+        data = json.loads(out)
+        self.assertFalse(data["ok"])
+        self.assertEqual(data["error"]["code"], BAD_INPUT)
+
+    def test_install_json_refuse_returns_error_envelope(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = Path(tmp)
+            (dest / "deep-reach").write_text("x", encoding="utf-8")
+            code, out = _run("skill", "install", "--dest", tmp, "--json", "--yes")
+        self.assertEqual(code, 2)
+        data = json.loads(out)
+        self.assertFalse(data["ok"])
+        self.assertEqual(data["error"]["code"], BAD_INPUT)
 
     def test_install_yes(self):
         with tempfile.TemporaryDirectory() as tmp:

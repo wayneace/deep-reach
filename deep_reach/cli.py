@@ -561,10 +561,26 @@ def cmd_skill(args: argparse.Namespace) -> int:
         return 0
     if command == "install":
         plan = build_install_plan(Path(args.dest))
-        if args.json and (args.dry_run or plan["action"] == "refuse"):
+        if args.json and args.dry_run:
             _print_json(plan)
         elif not args.json:
             print(format_install_plan(plan))
+
+        def fail(message: str) -> int:
+            if args.json:
+                _print_json(
+                    {
+                        "ok": False,
+                        "target": plan["target"],
+                        "state": plan["state"],
+                        "action": plan["action"],
+                        "error": {"code": BAD_INPUT, "message": message},
+                    }
+                )
+            else:
+                print(message, file=sys.stderr)
+            return 2
+
         if args.dry_run:
             return 0
         if plan["action"] == "none":
@@ -575,16 +591,13 @@ def cmd_skill(args: argparse.Namespace) -> int:
                 print(format_install_result(result))
             return 0
         if plan["action"] == "refuse":
-            raise ReachError(
-                BAD_INPUT, f"refusing to install over {plan['state']} target"
-            )
+            return fail(f"refusing to install over {plan['state']} target")
         if not args.yes:
             if not sys.stdin.isatty():
-                print("confirmation required; rerun with --yes", file=sys.stderr)
-                return 2
+                return fail("confirmation required; rerun with --yes")
             answer = input("Proceed with skill install? [y/N] ")
             if answer.strip().lower() not in {"y", "yes"}:
-                return 2
+                return fail("install declined")
         result = apply_install(plan)
         if args.json:
             _print_json(result)

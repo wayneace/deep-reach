@@ -9,7 +9,7 @@ Skill 入口与触发优化。
 - Skill description 改为“普通公开网页优先用内置工具”，增加选择路由表、P3 回退分组、完整错误表（含 `UPSTREAM_BROKEN` / `QUOTA_EXHAUSTED` / `CONFIG_ERROR`）和登录/浏览器边界。
 - Skill 示例统一使用安装版 `deep-reach`；源码仓库只说明用 uv 运行同一 CLI。
 - `setup` 汇总增加 skill 安装/检查提示。
-- 测试数更新为 363。
+- 测试数更新为 373。
 
 ## v0.13.0 — 2026-11-11
 

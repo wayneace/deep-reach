@@ -11,7 +11,7 @@ from typing import Optional
 
 import yaml
 
-from .result import BAD_INPUT, ReachError
+from .result import BAD_INPUT, CONFIG_ERROR, ReachError
 
 SKILL_NAME = "deep-reach"
 SKILL_PACKAGE = "deep_reach.data"
@@ -46,7 +46,11 @@ def read_skill_version(root: Path) -> Optional[str]:
         data = yaml.safe_load(front) or {}
     except yaml.YAMLError:
         return None
-    metadata = data.get("metadata") or {}
+    if not isinstance(data, dict):
+        return None
+    metadata = data.get("metadata")
+    if not isinstance(metadata, dict):
+        return None
     version = metadata.get("version")
     return str(version).strip() if version else None
 
@@ -73,8 +77,22 @@ def _diff_files(expected: dict[str, str], actual: dict[str, str]) -> list[str]:
 
 
 def skill_status(dest: Path) -> dict:
+    dest = Path(dest).expanduser()
+    if dest.exists() and not dest.is_dir():
+        raise ReachError(
+            BAD_INPUT, f"skills directory is not a directory: {dest}"
+        )
+    try:
+        return _skill_status(dest)
+    except OSError as exc:
+        raise ReachError(
+            CONFIG_ERROR, f"cannot inspect skill at {dest}: {exc}"
+        ) from exc
+
+
+def _skill_status(dest: Path) -> dict:
     target = installed_skill_dir(dest)
-    legacy = Path(dest).expanduser() / "skill"
+    legacy = dest / "skill"
     packaged = skill_dir()
     packaged_files = _skill_files(packaged)
     version = packaged_version()
@@ -96,6 +114,17 @@ def skill_status(dest: Path) -> dict:
     if not target.is_dir():
         result["state"] = "invalid"
         return result
+    installed_version = read_skill_version(target)
+    result["installed_version"] = installed_version
+    installed_tuple = _version_tuple(installed_version)
+    packaged_tuple = _version_tuple(version)
+    if (
+        installed_tuple is not None
+        and packaged_tuple is not None
+        and installed_tuple > packaged_tuple
+    ):
+        result["state"] = "ahead"
+        return result
     installed_files = _skill_files(target)
     missing = sorted(set(packaged_files) - set(installed_files))
     if "SKILL.md" not in installed_files or missing:
@@ -103,17 +132,11 @@ def skill_status(dest: Path) -> dict:
         result["diff"] = missing[:20]
         result["diff_count"] = len(missing)
         return result
-    installed_version = read_skill_version(target)
-    result["installed_version"] = installed_version
-    installed_tuple = _version_tuple(installed_version)
-    packaged_tuple = _version_tuple(version)
     if installed_tuple is None or packaged_tuple is None:
         result["state"] = "modified"
-        result["diff"] = _diff_files(packaged_files, installed_files)[:20]
-        result["diff_count"] = len(_diff_files(packaged_files, installed_files))
-        return result
-    if installed_tuple > packaged_tuple:
-        result["state"] = "ahead"
+        diff = _diff_files(packaged_files, installed_files)
+        result["diff"] = diff[:20]
+        result["diff_count"] = len(diff)
         return result
     if installed_tuple < packaged_tuple:
         diff = _diff_files(packaged_files, installed_files)
@@ -159,21 +182,43 @@ def apply_install(plan: dict) -> dict:
             f"refusing to install over {plan['state']} target: {target}",
         )
     parent = target.parent
-    parent.mkdir(parents=True, exist_ok=True)
-    temp = Path(tempfile.mkdtemp(prefix=".deep-reach-skill-", dir=str(parent)))
+    try:
+        parent.mkdir(parents=True, exist_ok=True)
+        temp = Path(tempfile.mkdtemp(prefix=".deep-reach-skill-", dir=str(parent)))
+    except OSError as exc:
+        raise ReachError(
+            CONFIG_ERROR, f"cannot prepare install at {parent}: {exc}"
+        ) from exc
     backup = parent / f".deep-reach-skill-backup-{os.getpid()}"
     try:
         staged = temp / "skill"
-        shutil.copytree(skill_dir(), staged)
+        try:
+            shutil.copytree(skill_dir(), staged)
+        except OSError as exc:
+            raise ReachError(
+                CONFIG_ERROR, f"cannot stage skill: {exc}"
+            ) from exc
         if target.exists() or target.is_symlink():
             if backup.exists():
                 shutil.rmtree(backup)
-            os.replace(target, backup)
+            try:
+                os.replace(target, backup)
+            except OSError as exc:
+                raise ReachError(
+                    CONFIG_ERROR, f"cannot move old skill aside: {exc}"
+                ) from exc
         try:
             os.replace(staged, target)
-        except Exception:
+        except Exception as exc:
             if backup.exists():
-                os.replace(backup, target)
+                try:
+                    os.replace(backup, target)
+                except OSError:
+                    pass
+            if isinstance(exc, OSError):
+                raise ReachError(
+                    CONFIG_ERROR, f"cannot install skill at {target}: {exc}"
+                ) from exc
             raise
         if backup.exists():
             shutil.rmtree(backup, ignore_errors=True)
