@@ -1,11 +1,15 @@
+import io
+import json
 import os
 import re
 import shutil
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 from unittest import mock
 
+from deep_reach.cli import main
 from deep_reach.runtime.result import ReachError
 from deep_reach.runtime.skill import (
     apply_install,
@@ -243,6 +247,84 @@ class SkillInstallTest(unittest.TestCase):
                 with self.assertRaises(OSError):
                     apply_install(plan)
             self.assertEqual((target / "SKILL.md").read_text(encoding="utf-8"), before)
+
+
+def _run(*args: str) -> tuple[int, str]:
+    out = io.StringIO()
+    with redirect_stdout(out):
+        code = main(list(args))
+    return code, out.getvalue()
+
+
+class SkillCliTest(unittest.TestCase):
+    def test_path_text(self):
+        code, out = _run("skill", "path")
+        self.assertEqual(code, 0)
+        self.assertIn("deep-reach", out)
+
+    def test_path_json(self):
+        code, out = _run("skill", "path", "--json")
+        self.assertEqual(code, 0)
+        data = json.loads(out)
+        self.assertTrue(data["ok"])
+        self.assertTrue(data["path"].endswith("skill"))
+
+    def test_show_text(self):
+        code, out = _run("skill", "show")
+        self.assertEqual(code, 0)
+        self.assertTrue(out.startswith("---"))
+
+    def test_show_json(self):
+        code, out = _run("skill", "show", "--json")
+        self.assertEqual(code, 0)
+        data = json.loads(out)
+        self.assertIn("name: deep-reach", data["content"])
+
+    def test_status_json(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            code, out = _run("skill", "status", "--dest", tmp, "--json")
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(out)["state"], "missing")
+
+    def test_install_dry_run(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            code, _ = _run("skill", "install", "--dest", tmp, "--dry-run")
+            self.assertEqual(code, 0)
+            self.assertFalse((Path(tmp) / "deep-reach").exists())
+
+    def test_install_non_interactive_requires_yes(self):
+        with tempfile.TemporaryDirectory() as tmp, mock.patch(
+            "sys.stdin.isatty", return_value=False
+        ):
+            code, _ = _run("skill", "install", "--dest", tmp)
+            self.assertEqual(code, 2)
+            self.assertFalse((Path(tmp) / "deep-reach").exists())
+
+    def test_install_yes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            legacy = Path(tmp) / "skill"
+            legacy.mkdir()
+            code, _ = _run("skill", "install", "--dest", tmp, "--yes")
+            self.assertEqual(code, 0)
+            self.assertTrue((Path(tmp) / "deep-reach" / "SKILL.md").is_file())
+            self.assertTrue(legacy.is_dir())
+
+    def test_install_declined(self):
+        with tempfile.TemporaryDirectory() as tmp, mock.patch(
+            "sys.stdin.isatty", return_value=True
+        ), mock.patch("builtins.input", return_value="n"):
+            code, _ = _run("skill", "install", "--dest", tmp)
+            self.assertEqual(code, 2)
+            self.assertFalse((Path(tmp) / "deep-reach").exists())
+
+    def test_install_ahead_does_not_downgrade(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target = _install_copy(Path(tmp))
+            _set_version(target, "99.0.0")
+            code, out = _run("skill", "install", "--dest", tmp, "--yes")
+            self.assertEqual(code, 0)
+            self.assertIn("not downgrading", out.lower())
+            self.assertIn("99.0.0", (target / "SKILL.md").read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

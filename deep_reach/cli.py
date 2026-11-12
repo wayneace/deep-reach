@@ -64,7 +64,17 @@ from .runtime.setup import (
     format_setup_summary,
     kept_results,
 )
-from .runtime.result import ReachError, dump, redact_text
+from .runtime.skill import (
+    apply_install,
+    build_install_plan,
+    format_install_plan,
+    format_install_result,
+    format_skill_status,
+    packaged_version,
+    skill_dir,
+    skill_status,
+)
+from .runtime.result import BAD_INPUT, ReachError, dump, redact_text
 
 JSON_DEFAULT = True
 
@@ -525,6 +535,66 @@ def cmd_setup(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_skill(args: argparse.Namespace) -> int:
+    command = getattr(args, "skill_command", None)
+    if command == "path":
+        payload = {"ok": True, "path": str(skill_dir()), "version": packaged_version()}
+        if args.json:
+            _print_json(payload)
+        else:
+            print(payload["path"])
+        return 0
+    if command == "show":
+        path = skill_dir() / "SKILL.md"
+        content = path.read_text(encoding="utf-8")
+        if args.json:
+            _print_json({"ok": True, "path": str(path), "content": content})
+        else:
+            print(content, end="" if content.endswith("\n") else "\n")
+        return 0
+    if command == "status":
+        status = skill_status(Path(args.dest))
+        if args.json:
+            _print_json(status)
+        else:
+            print(format_skill_status(status))
+        return 0
+    if command == "install":
+        plan = build_install_plan(Path(args.dest))
+        if args.json and (args.dry_run or plan["action"] == "refuse"):
+            _print_json(plan)
+        elif not args.json:
+            print(format_install_plan(plan))
+        if args.dry_run:
+            return 0
+        if plan["action"] == "none":
+            result = apply_install(plan)
+            if args.json:
+                _print_json(result)
+            else:
+                print(format_install_result(result))
+            return 0
+        if plan["action"] == "refuse":
+            raise ReachError(
+                BAD_INPUT, f"refusing to install over {plan['state']} target"
+            )
+        if not args.yes:
+            if not sys.stdin.isatty():
+                print("confirmation required; rerun with --yes", file=sys.stderr)
+                return 2
+            answer = input("Proceed with skill install? [y/N] ")
+            if answer.strip().lower() not in {"y", "yes"}:
+                return 2
+        result = apply_install(plan)
+        if args.json:
+            _print_json(result)
+        else:
+            print(format_install_result(result))
+        return 0
+    print("usage: deep-reach skill path|show|status|install", file=sys.stderr)
+    return 2
+
+
 def cmd_profile(args: argparse.Namespace) -> int:
     if args.profile_command == "status":
         try:
@@ -727,6 +797,30 @@ def build_parser(registry) -> argparse.ArgumentParser:
         "--yes", action="store_true", help="apply the plan without prompting"
     )
     setup.set_defaults(func=cmd_setup)
+
+    skill = sub.add_parser("skill", help="install and inspect the agent skill")
+    skill_sub = skill.add_subparsers(dest="skill_command")
+    skill.set_defaults(func=cmd_skill)
+
+    s_path = skill_sub.add_parser("path")
+    s_path.add_argument("--json", action="store_true")
+    s_path.set_defaults(func=cmd_skill)
+
+    s_show = skill_sub.add_parser("show")
+    s_show.add_argument("--json", action="store_true")
+    s_show.set_defaults(func=cmd_skill)
+
+    s_status = skill_sub.add_parser("status")
+    s_status.add_argument("--dest", required=True)
+    s_status.add_argument("--json", action="store_true")
+    s_status.set_defaults(func=cmd_skill)
+
+    s_install = skill_sub.add_parser("install")
+    s_install.add_argument("--dest", required=True)
+    s_install.add_argument("--dry-run", action="store_true")
+    s_install.add_argument("--yes", action="store_true")
+    s_install.add_argument("--json", action="store_true")
+    s_install.set_defaults(func=cmd_skill)
 
     profile = sub.add_parser("profile", help="inspect or set the Chrome profile")
     profile_sub = profile.add_subparsers(dest="profile_command")
