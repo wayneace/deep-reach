@@ -163,12 +163,20 @@ Agent 应该 branch `ok` 和 `error.code`，不要解析底层文本。`tier` �
 
 ## 安装 skill
 
-```bash
-deep-reach skill path
-deep-reach skill install --dest <your client's skills directory>
-deep-reach skill status --dest <your client's skills directory>
+如果客户端有技能市场（marketplace，例如 Cherry Studio），优先从市场安装：
+
+```text
+https://github.com/wayneace/deep-reach/blob/main/deep_reach/data/skill/SKILL.md
 ```
 
-安装目标是 `<skills-dir>/deep-reach/`，不会写到 `<skills-dir>/skill/`，也不会自动删除旧的
-`<skills-dir>/skill/`。源码仓库内开发时通过 uv 运行同一 CLI（`uv run` + 命令名）；
-安装版直接用 `deep-reach`。
+市场安装的目录名是 `skill`，显示名是 `deep-reach`，由市场负责更新。
+
+没有市场时再用 CLI 安装：
+
+```bash
+deep-reach skill install --dest ~/.agents/skills --yes   # Codex
+deep-reach skill install --dest ~/.claude/skills --yes   # Claude Code
+deep-reach skill install --dest <skills-dir> --yes       # 其他客户端
+```
+
+CLI 安装目标是 `<skills-dir>/deep-reach/`。不要两种方式同时装。

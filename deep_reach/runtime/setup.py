@@ -289,13 +289,11 @@ def format_setup_summary(
     lines.append("")
     lines.append("Skill:")
     lines.append(
-        "  install: deep-reach skill install --dest "
-        "<your client's skills directory>"
+        "  marketplace: install from your client's skill marketplace "
+        "(Cherry Studio recommended)"
     )
-    lines.append(
-        "  check:   deep-reach skill status --dest "
-        "<your client's skills directory>"
-    )
+    lines.append("  fallback:    deep-reach skill install --dest <skills-dir>")
+    lines.append("  check:       deep-reach skill status --dest <skills-dir>")
 
     return redact_text("\n".join(lines))
 

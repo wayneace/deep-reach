@@ -10,6 +10,7 @@ DOCS = (
     "SECURITY.md",
     "CONTRIBUTING.md",
     "pyproject.toml",
+    "docs/install.md",
     "deep_reach/data/skill/SKILL.md",
     "deep_reach/data/skill/references/capabilities.md",
     "deep_reach/product.py",
@@ -97,6 +98,42 @@ class SkillContractTest(unittest.TestCase):
 
     def test_skill_documents_install_command(self):
         self.assertIn("deep-reach skill install", self.text)
+
+    def test_skill_prefers_marketplace_and_names_client_paths(self):
+        for phrase in (
+            "marketplace",
+            "~/.agents/skills",
+            "~/.claude/skills",
+            "不要两种方式同时装",
+        ):
+            self.assertIn(phrase, self.text)
+
+
+INSTALL = ROOT / "docs" / "install.md"
+
+
+class InstallGuideTest(unittest.TestCase):
+    def setUp(self):
+        self.text = INSTALL.read_text(encoding="utf-8")
+
+    def test_covers_supported_clients(self):
+        for phrase in (
+            "Cherry Studio",
+            "Codex",
+            "Claude Code",
+            "~/.agents/skills",
+            "~/.claude/skills",
+            "deep-reach skill install",
+            "marketplace",
+            "cli_install",
+            "npm:@jackwener/opencli",
+        ):
+            self.assertIn(phrase, self.text)
+
+    def test_does_not_tell_users_to_install_from_pypi(self):
+        lowered = self.text.lower()
+        self.assertIn("pypi", lowered)
+        self.assertIn("不要", lowered)
 
 
 if __name__ == "__main__":

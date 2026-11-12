@@ -6,15 +6,28 @@
 
 - 产品定义：[PRODUCT.md](PRODUCT.md)
 - 重构计划：[REFACTOR_PLAN.md](REFACTOR_PLAN.md)
+- 给别人安装：[docs/install.md](docs/install.md)
+
+## 安装（给别人用）
+
+把 [docs/install.md](docs/install.md) 发给对方的 agent。
+
+- **Cherry Studio**：CLI 用 `cli_install`（`pipx:wayneace/deep-reach`）；skill 优先从技能市场安装 GitHub 上的 `SKILL.md`。
+- **Codex / Claude Code / 通用**：从 GitHub tag 安装 CLI，再用 `deep-reach skill install --dest <skills-dir>` 安装 skill。
+- **源码开发**：见下面的“快速开始（源码开发）”。
+
+> `deep-reach` 目前不在 PyPI；不要从 PyPI 安装同名包。
 
 ## 状态
 
-- 版本 **0.14.0**；373 个单元测试。
+- 版本 **0.14.0**；377 个单元测试。
 - 21 个可见渠道，10 个有 P0 覆盖；8 个 default 渠道 live smoke 通过（P0/P1，未含 P3）。
 - `channels` / `doctor` 的 `status` 是**当前环境实测值**（`ready` / `degraded` / `fallback` / `needs_setup` / `needs_login` / `needs_key` / `experimental`）；`declared_status` 保留注册表声明。
 - 可读可写：写操作由动作声明决定；P3 bsk 可执行写操作，调用方需确认用户意图。
 
-## 快速开始
+## 快速开始（源码开发）
+
+以下命令只在源码仓库内使用；给别人安装请看 [docs/install.md](docs/install.md)。
 
 需要 Python 3.10+ 和 [uv](https://docs.astral.sh/uv/)。
 
@@ -192,16 +205,22 @@ P2 搜索/阅读（按顺序降级，缺 key 自动跳过）：
 
 ## Agent skill
 
-Skill 随 wheel 打包，安装到客户端的 skills 目录：
+Skill 有两种安装方式，选一种：
 
-```bash
-deep-reach skill path
-deep-reach skill install --dest <skills-dir>
-deep-reach skill status --dest <skills-dir>
-```
+- **Cherry Studio / 有技能市场的客户端**：从市场安装
+  `https://github.com/wayneace/deep-reach/blob/main/deep_reach/data/skill/SKILL.md`。
+  市场安装的目录名是 `skill`，由市场负责更新。
+- **Codex / Claude Code / 没有市场的客户端**：
 
-安装目标是 `<skills-dir>/deep-reach/`，不会写到 `<skills-dir>/skill/`，也不会自动删除旧的
-`<skills-dir>/skill/`。确认新 skill 可用后，由用户手动处理旧目录。
+  ```bash
+  deep-reach skill install --dest ~/.agents/skills --yes   # Codex
+  deep-reach skill install --dest ~/.claude/skills --yes   # Claude Code
+  deep-reach skill install --dest <skills-dir> --yes       # 其他
+  ```
+
+  CLI 安装的目录名是 `deep-reach`。
+
+完整客户端矩阵和验证步骤见 [docs/install.md](docs/install.md)。不要两种方式同时装。
 
 ## 浏览器与 profile
 
@@ -217,12 +236,14 @@ P1 只使用**显式绑定的专用 Chrome profile**。Deep-Reach 不会自动�
 首次设置：
 
 ```bash
-uv run deep-reach profile launch     # 用 ~/.deep-reach/chrome-profile 启动专用 Chrome
+deep-reach profile launch     # 用 ~/.deep-reach/chrome-profile 启动专用 Chrome
 # 在这个窗口安装/启用 OpenCLI 扩展：
 # https://chromewebstore.google.com/detail/opencli/ildkmabpimmkaediidaifkhjpohdnifk
-uv run deep-reach profile status     # 查看所有已连接 contextId
-uv run deep-reach profile set <contextId>
+deep-reach profile status     # 查看所有已连接 contextId
+deep-reach profile set <contextId>
 ```
+
+源码仓库内用 `uv run deep-reach`；安装版直接用 `deep-reach`。
 
 之后 `deep-reach doctor` 会显示 `browser: dedicated <contextId> (connected)`。专用 profile 里的网站需要单独登录；P0/P2 渠道不受影响。P1 动作发现专用 profile 未运行时，会自动无窗口启动 `~/.deep-reach/chrome-profile`（`--no-startup-window`）并等待扩展连接，不需要手动执行 `profile launch`；动作结束后会自动关闭这个专用 Chrome，只匹配专用 `user-data-dir`，不影响主浏览器。首次安装扩展仍需先启动一次专用窗口。`doctor` 会对比已安装 OpenCLI 与推荐版本，落后时给出升级命令；OpenCLI 不自动升级。
 

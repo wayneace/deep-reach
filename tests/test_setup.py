@@ -178,6 +178,7 @@ class SetupSummaryTest(unittest.TestCase):
             plan = build_setup_plan(Keys({}, path=path), opencli_version="")
             text = format_setup_summary(plan, [], plan.keys)
         self.assertIn("Skill:", text)
+        self.assertIn("marketplace", text)
         self.assertIn("deep-reach skill install --dest", text)
 
 
