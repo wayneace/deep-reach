@@ -4,7 +4,6 @@ include README.md
 include CHANGELOG.md
 include SECURITY.md
 include CONTRIBUTING.md
-recursive-include deep_reach/data *.yaml
-recursive-include skill *.md
+recursive-include deep_reach/data *.yaml *.md
 recursive-include tests *.py
 recursive-include scripts *.py

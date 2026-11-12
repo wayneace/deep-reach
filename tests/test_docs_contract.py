@@ -8,8 +8,8 @@ DOCS = (
     "SECURITY.md",
     "CONTRIBUTING.md",
     "pyproject.toml",
-    "skill/SKILL.md",
-    "skill/references/capabilities.md",
+    "deep_reach/data/skill/SKILL.md",
+    "deep_reach/data/skill/references/capabilities.md",
     "deep_reach/product.py",
 )
 BANNED = (

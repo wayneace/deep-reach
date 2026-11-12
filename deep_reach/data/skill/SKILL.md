@@ -7,6 +7,9 @@ description: |
   知乎/微博/B站/抖音搜索、Amazon 商品或榜单、Kickstarter/Indiegogo、USPTO/EPO/
   专利商标检索、GitHub 仓库/issue、V2EX 帖子，或读取公开网页时使用。写操作需用户明确确认；
   不要用于需要付费 API 的场景；Amazon 关键词量/流量数据不在 Deep-Reach 范围。
+metadata:
+  homepage: https://github.com/wayneace/deep-reach
+  version: "0.13.0"
 ---
 
 # Deep-Reach

@@ -258,11 +258,9 @@ deep_reach/
   data/
     channels.yaml       # 精选渠道 + backend tier（随 wheel 打包）
     keys.example.yaml   # key 模板（随 wheel 打包）
+    skill/              # agent skill（随 wheel 打包）
   product.py    # 产品承诺与分层
   cli.py        # deep-reach <channel> <action>
-skill/
-  SKILL.md                  # agent 使用说明
-  references/capabilities.md # 能力契约
 ```
 
 ## 开发
