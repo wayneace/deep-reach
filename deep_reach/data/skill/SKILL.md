@@ -1,12 +1,12 @@
 ---
 name: deep-reach
 description: |
-  通用 agent 上网入口，按 P0 官方接口 → P1 公开网页 → P2 第三方引擎 → P3 bsk UI 回退降级。
-  重点覆盖产品调研：国内外社媒、Amazon 选品、众筹、专利/版权。用 `deep-reach`
-  CLI 做搜索、抓取和写操作。当用户要做选品、竞品调研、社媒口碑/差评、Reddit/小红书/
-  知乎/微博/B站/抖音搜索、Amazon 商品或榜单、Kickstarter/Indiegogo、USPTO/EPO/
-  专利商标检索、GitHub 仓库/issue、V2EX 帖子，或读取公开网页时使用。写操作需用户明确确认；
-  不要用于需要付费 API 的场景；Amazon 关键词量/流量数据不在 Deep-Reach 范围。
+  给 agent 的结构化上网入口：按 P0 官方接口 → P1 公开网页 → P2 第三方引擎 →
+  P3 bsk UI 回退降级。重点覆盖产品调研：国内外社媒、Amazon 选品、众筹、专利/版权。
+  当用户点名支持的平台、粘贴这些平台的链接、需要评论/字幕/榜单/商品/专利等结构化数据，
+  或内置 web search/read 不可用、失败、拿不到正文时使用。
+  普通公开网页优先用内置工具；Deep-Reach 补齐结构化数据和登录/反爬场景。
+  写操作仅在用户明确要求时执行；付费 API、Amazon 关键词量/流量数据不在范围内。
 metadata:
   homepage: https://github.com/wayneace/deep-reach
   version: "0.13.0"
@@ -14,82 +14,77 @@ metadata:
 
 # Deep-Reach
 
-Deep-Reach 是 AI agent 的**上网入口**。它不分析；可读可写，写操作由动作声明，
-P3 bsk 可执行写操作但需确认用户意图。它负责把分散在社媒、电商、众筹、专利网站和
-公开网页上的内容稳定地取回来，并返回统一的 JSON。
+Deep-Reach 是 AI agent 的**结构化上网入口**。它不分析；返回统一 JSON，
+读操作和写操作都由动作声明。
 
-后端按层降级：
+## 选择路由
 
-| 层 | 路径 | 凭证 |
-|---|---|---|
-| P0 | 官方接口：官方 API 免费层 / 公开 JSON / 官方 CLI | none / key / oauth |
-| P1 | 公开网页：直连 HTTP / Jina Reader / OpenCLI 公开命令 | none / 可选 key；OpenCLI 需专用 profile |
-| P2 | 第三方搜索/采集引擎：Tavily / Brave / Firecrawl / Bright Data | key / quota |
-| P3 | bsk UI 回退：`deep-reach bsk`（守卫版） | public / login |
+| 情况 | 用什么 |
+|---|---|
+| 普通公开网页，内置 search/read 能拿到正文 | 内置工具 |
+| 用户点名支持的平台，或粘贴平台链接 | `deep-reach <channel> <action>` |
+| 需要评论、字幕、榜单、商品、专利等结构化数据 | `deep-reach` 对应动作 |
+| 内置 search/read 不可用、失败、拿不到正文 | `deep-reach web read` 或对应 channel |
+| 登录墙、验证码后的页面、写操作 | `deep-reach bsk`（写前确认） |
+| 不确定渠道/参数 | `deep-reach channels --json` |
+| 环境、缺 key、OpenCLI/profile 问题 | `deep-reach doctor --json` |
 
-## 先看能力
+配套规则：
+
+- 平台名或链接只说明来源，不等于授权安装、登录或写操作。
+- 先返回已经拿到的公开结果；用户不登录时不要空手而归。
+- 不要假设渠道存在；以 `deep-reach channels --json` 的当前环境结果为准。
+- 不要一次输出全部 capabilities；需要时查单个渠道。
+- 失败时按错误码处理，不要换账号、换后端或循环重试。
+
+## 调用前
+
+- 用一句话说明要用的 channel/action；P3 或写操作必须说明并确认。
+- 只有用户明确说“发/评论/点赞/关注/私信”等，才算写操作授权；不要从“帮我看看”推断写意图。
+- 不要因为用户提到平台名或粘贴链接就自动安装、登录或写。
+- 首次使用或缺配置时，先读 `deep-reach doctor --json`；`setup` 只创建 keys 文件，不启动 Chrome。
+
+## 命令
+
+### 自动路径（P0/P1/P2）
 
 ```bash
-uv run deep-reach setup          # 首次部署：确认后创建 keys 文件
-uv run deep-reach doctor
-uv run deep-reach tiers
-uv run deep-reach channels
-uv run deep-reach capabilities <channel>
-uv run deep-reach state
+deep-reach bilibili search "收纳" --limit 5
+deep-reach youtube search "desk organizer" --limit 5
+deep-reach weibo hot --limit 10
+deep-reach xueqiu quote SH600519
+deep-reach amazon product B0C9ZHWC9K
+deep-reach github search "desk organizer" --limit 5
+deep-reach v2ex hot --limit 10
+deep-reach web read https://example.com/article
 ```
 
-- 首次运行先执行 `setup`；它只创建 keys 文件并打印下一步，不启动 Chrome。OpenCLI 缺失时，用当前 agent 客户端的管理器安装（Cherry Studio 用 `cli_install`，recipe `npm:@jackwener/opencli`；普通环境用 npm），再执行 `profile launch` 安装扩展。绑定后 P1 动作会自动启动专用 Chrome profile、等待扩展连接，并在动作结束后关闭它；不需要每次手动打开或关闭。
-- `doctor` 告诉你哪些渠道可用、缺什么、下一步做什么。
-- `tiers` 显示分层定义和每个渠道的层级覆盖。
-- `channels` 显示已实现渠道，`status` 是当前环境实测值。
-- `fallback` 表示只有手动 bsk UI 路径：`runnable=true`，但 `available_actions` 为空；用 `deep-reach bsk ...` 完成。
-- `capabilities` 是能力契约：能拿什么、不能拿什么、走哪一层。
-- `state` 显示限流冷却、暂停的后端和搜索间隔；`--clear` 清空记忆。
+### P3 回退
 
-## 常用命令
+这些 channel 命令在没有自动后端时返回 `NEED_UI`；直接走 `deep-reach bsk ...` 更快：
 
 ```bash
-# 社媒
-uv run deep-reach bilibili search "收纳" --limit 5
-uv run deep-reach youtube search "desk organizer" --limit 5
-uv run deep-reach weibo hot --limit 10
-uv run deep-reach xueqiu quote SH600519
-uv run deep-reach xueqiu quote AAPL
-uv run deep-reach xueqiu search 茅台 --limit 5
-uv run deep-reach xueqiu hot --limit 10
-uv run deep-reach xueqiu hot_stocks --limit 10
-uv run deep-reach x search "AI" --limit 5
-uv run deep-reach reddit search "desk" --limit 5
-uv run deep-reach xiaohongshu search "露营灯" --limit 5
-uv run deep-reach zhihu search "收纳" --limit 5
-uv run deep-reach douyin search "收纳" --limit 5
-
-# 开发者社区
-uv run deep-reach github search "desk organizer" --limit 5
-uv run deep-reach github read owner/repo
-uv run deep-reach github issues owner/repo --limit 10
-uv run deep-reach v2ex hot --limit 10
-uv run deep-reach v2ex node create --limit 10
-uv run deep-reach v2ex comments 123456 --limit 20
-
-# 电商 / 新品
-uv run deep-reach amazon search "desk organizer" --limit 10
-uv run deep-reach amazon product B0C9ZHWC9K
-uv run deep-reach amazon bestsellers --limit 20
-uv run deep-reach ebay search "desk organizer" --limit 10
-uv run deep-reach etsy search "desk organizer" --limit 10
-uv run deep-reach producthunt hot --limit 10
-
-# 专利
-uv run deep-reach uspto search "desk organizer" --limit 10
-uv run deep-reach epo search "desk organizer" --limit 10
-uv run deep-reach epo read EP1234567
-
-# 网页
-uv run deep-reach web read https://example.com/article
+deep-reach bsk status
+deep-reach bsk session start --json
+deep-reach bsk navigate https://example.com --session <id>
+deep-reach bsk observe --session <id>
+deep-reach bsk click @e1 --session <id>
+deep-reach bsk session stop <id>
 ```
 
-默认输出一行 JSON。需要人类可读摘要时加 `--text`；需要格式化 JSON 时加 `--pretty`。
+对应渠道：`x`、`reddit`、`xiaohongshu`、`zhihu`、`douyin`。
+
+### 需要 key
+
+```bash
+deep-reach web search "desk organizer" --limit 10
+deep-reach ebay search "desk organizer" --limit 10
+deep-reach etsy search "desk organizer" --limit 10
+deep-reach uspto search "desk organizer" --limit 10
+deep-reach epo search "desk organizer" --limit 10
+```
+
+缺 key 时用 `deep-reach doctor --json` 看 `keys_file` 和缺失项；不要把 key 打印出来。
 
 ## 结果信封
 
@@ -117,24 +112,37 @@ Agent 应该 branch `ok` 和 `error.code`，不要解析底层文本。`tier` �
 
 | code | 含义 | 行动 |
 |---|---|---|
-| `NEED_LOGIN` | 需要登录 | 告诉用户在浏览器登录对应站点；不要索要密码 |
-| `NEED_SETUP` | 后端/扩展/工具未安装 | 让用户运行 `deep-reach doctor` |
-| `KEY_MISSING` | key 缺失 | 告诉用户可选填 key，或使用 fallback |
+| `NEED_LOGIN` | 需要登录 | P1：在专用 Chrome profile 登录；P3：在当前浏览器登录。不要索要密码或 Cookie |
+| `NEED_SETUP` | 后端/扩展/工具未安装 | 读 `deep-reach doctor --json`；OpenCLI 缺失时按客户端安装，再 `profile launch`/`profile status`/`profile set` |
+| `KEY_MISSING` | key 缺失 | 读 `doctor --json` 的 `keys_file`；让用户填 `~/.deep-reach/keys.yaml`，不要回显 key |
+| `UPSTREAM_BROKEN` | 平台临时不可用 | 自动尝试下一层；全失败时按平台名告诉用户，不要循环重试 |
+| `QUOTA_EXHAUSTED` | 免费额度用完 | 自动降层；全耗尽时告诉用户，不要换账号 |
 | `RATE_LIMITED` | 平台限流 | 停止本次动作并冷却渠道 1 小时；不要换后端、换账号或循环重试 |
 | `PLATFORM_BLOCKED` | 验证码/风控 | 停止自动化，让用户手动完成 |
 | `WRITE_BLOCKED` | 该后端不支持这个写操作 | 换一个支持写的动作，或走 P3 bsk；写操作需确认用户意图 |
 | `NEED_UI` | 自动后端无法完成 | 用 `deep-reach bsk ...` 回退；不要直接 fetch 站点内部接口 |
 | `POLICY_BLOCKED` | bsk 守卫拦截 | 改用 observe/click/extract/network 读取，不要 fetch/XHR 或 replay |
 | `NOT_FOUND` | 内容不存在 | 检查 URL/ID |
-| `BAD_INPUT` | 参数错误 | 运行 `deep-reach <channel> <action> --help` |
+| `BAD_INPUT` | 参数错误 | 运行 `deep-reach channels --json` 或 `deep-reach <channel> <action> --help` |
 | `TIMEOUT` | 超时 | 稍后重试，不要循环 |
-| `SOURCE_DISABLED` | 没有可用后端 | 运行 `doctor` 看下一步 |
+| `SOURCE_DISABLED` | 没有可用后端 | 运行 `deep-reach doctor --json` 看下一步 |
+| `CONFIG_ERROR` | 配置文件错误 | 让用户修 `keys.yaml`；不要回显文件内容或 key |
 | `BUSY` | 共享浏览器槽位满了 | 停止；等一分钟再试，不要换账号或开新浏览器 |
+
+`NEED_SETUP` 的完整步骤：
+
+1. 运行 `deep-reach doctor --json`，读 `opencli.missing`、`profile.configured`、`keys_file`。
+2. OpenCLI 缺失：Cherry Studio 用 `cli_install`（recipe `npm:@jackwener/opencli`）；
+   其他客户端用 `npm install -g @jackwener/opencli@2.0.3`。
+3. 运行 `deep-reach profile launch`，在专用窗口安装/启用扩展；
+   再运行 `deep-reach profile status`，然后 `deep-reach profile set <contextId>`。
+4. 绑定后 P1 动作会自动启动专用 Chrome profile、等待扩展连接，并在动作结束后关闭它。
 
 ## 规则
 
 - **写操作**：可以写，但必须先确认用户意图；P3 bsk 可写；未经确认不要发帖、评论、点赞、私信、关注。
 - **不碰凭据**：不要索要密码、Cookie、token；让用户自己在浏览器登录或填 key。
+- **不共享登录态**：P1 只使用显式绑定的专用 Chrome profile；P3 使用当前浏览器；不要把主浏览器登录态复制给 P1。
 - **不编造**：结果来自 `items`；搜索摘要不能当全文。
 - **不承诺完整评论树**：`comments` 动作返回的是已加载/可见范围。
 - **不把 `raw` 当公开输出**：默认只使用统一字段；需要调试时再看 `raw`。
@@ -144,9 +152,22 @@ Agent 应该 branch `ok` 和 `error.code`，不要解析底层文本。`tier` �
 - **平台边界**：`PLATFORM_BLOCKED` 时停止，不要换后端、换账号继续撞。
 - **配额边界**：P0 配额用完会自动走 P1/P2；不要为此切换账号。
 - **尊重限速**：同渠道搜索自动间隔 10 秒；`RATE_LIMITED` 后渠道冷却 1 小时。不要用并发绕过。
-- **本地频率上限**：同一渠道每分钟最多 40 次后端请求；超出会等待，预算不够则返回 `BUSY`。这是本地保护，不是平台封禁。并行任务共享这 40 次，不是每个任务各 40 次。
+- **本地频率上限**：同一渠道每分钟最多 40 次后端请求；超出会等待，预算不够则返回 `BUSY`。并行任务共享这 40 次，不是每个任务各 40 次。
 - **暂停不是坏掉**：`skipped=true` 表示后端在冷却窗口内被跳过，换时间重试即可。
 
 ## 能力契约
 
 完整表见 [references/capabilities.md](references/capabilities.md)。
+实际可用性以 `deep-reach channels --json` 为准；`fallback` 表示只有手动 bsk UI 路径。
+
+## 安装 skill
+
+```bash
+deep-reach skill path
+deep-reach skill install --dest <your client's skills directory>
+deep-reach skill status --dest <your client's skills directory>
+```
+
+安装目标是 `<skills-dir>/deep-reach/`，不会写到 `<skills-dir>/skill/`，也不会自动删除旧的
+`<skills-dir>/skill/`。源码仓库内开发时通过 uv 运行同一 CLI（`uv run` + 命令名）；
+安装版直接用 `deep-reach`。
