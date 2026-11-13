@@ -52,7 +52,8 @@ https://github.com/wayneace/deep-reach/blob/main/deep_reach/data/deep-reach/SKIL
 显示名是 `deep-reach`，后续由市场负责检查更新。旧版从 `skill` 目录安装的用户
 需要先卸载旧条目，再用上面的新 URL 重装。
 
-**不要再运行 `deep-reach skill install`**，否则会多装一份本地 skill。
+**不要再用 `deep-reach skill install` 指向这个目录**：它和市场的目标都是
+`<skills-dir>/deep-reach/`，会覆盖市场管理的副本，并可能破坏市场的更新跟踪。
 
 ### 3. 安装 OpenCLI
 

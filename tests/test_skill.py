@@ -133,12 +133,30 @@ class SkillStatusTest(unittest.TestCase):
             status = skill_status(dest)
         self.assertEqual(status["state"], "symlink")
 
-    def test_legacy_flag(self):
+    def test_legacy_flag_for_old_deep_reach_skill(self):
         with tempfile.TemporaryDirectory() as tmp:
             dest = Path(tmp)
-            (dest / "skill").mkdir()
+            legacy = dest / "skill"
+            legacy.mkdir()
+            (legacy / "SKILL.md").write_text(
+                '---\nname: deep-reach\nmetadata:\n  version: "0.13.0"\n---\n',
+                encoding="utf-8",
+            )
             status = skill_status(dest)
         self.assertTrue(status["legacy"])
+        self.assertEqual(status["state"], "missing")
+
+    def test_bsk_sibling_is_not_legacy(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = Path(tmp)
+            sibling = dest / "skill"
+            sibling.mkdir()
+            (sibling / "SKILL.md").write_text(
+                "---\nname: browser-skill\nversion: 0.5.0\n---\n",
+                encoding="utf-8",
+            )
+            status = skill_status(dest)
+        self.assertFalse(status["legacy"])
         self.assertEqual(status["state"], "missing")
 
     def test_ahead_with_missing_file_is_still_ahead(self):

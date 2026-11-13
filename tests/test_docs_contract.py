@@ -157,6 +157,10 @@ class InstallGuideTest(unittest.TestCase):
         self.assertIn("deep_reach/data/deep-reach/SKILL.md", self.text)
         self.assertNotIn("deep_reach/data/skill/SKILL.md", self.text)
 
+    def test_warns_cli_install_would_overwrite_marketplace_copy(self):
+        self.assertIn("覆盖市场", self.text)
+        self.assertIn("更新跟踪", self.text)
+
 
 if __name__ == "__main__":
     unittest.main()

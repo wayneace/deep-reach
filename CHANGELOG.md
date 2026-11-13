@@ -9,7 +9,9 @@ Skill 安装目录与发布 tag 修复。
 - 从本版本起 release tag 使用裸 semver（`0.14.2`），避免 mise 返回
   `v0.14.2` 后客户端再补一个 `v` 显示成 `vv0.14.2`。
 - 旧市场安装需要从新 URL 重装；CLI 安装路径不变。
-- 测试数更新为 384。
+- `skill status` / `install` 不再把 bsk 的 `skill/` 当成 deep-reach legacy 目录；
+  只有 `SKILL.md` 的 `name` 为 `deep-reach` 时才提示。
+- 测试数更新为 386。
 
 ## v0.14.1 — 2026-11-12
 

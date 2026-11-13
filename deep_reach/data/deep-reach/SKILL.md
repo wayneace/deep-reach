@@ -179,4 +179,5 @@ deep-reach skill install --dest ~/.claude/skills --yes   # Claude Code
 deep-reach skill install --dest <skills-dir> --yes       # 其他客户端
 ```
 
-CLI 安装目标是 `<skills-dir>/deep-reach/`。不要两种方式同时装。
+CLI 安装目标是 `<skills-dir>/deep-reach/`。不要两种方式同时装；CLI 会覆盖
+市场管理的同名副本。

@@ -55,6 +55,17 @@ def read_skill_version(root: Path) -> Optional[str]:
     return str(version).strip() if version else None
 
 
+def _is_legacy_deep_reach(root: Path) -> bool:
+    path = root / "SKILL.md"
+    if not path.is_file():
+        return False
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    return re.search(r"(?m)^name:\s*deep-reach\s*$", text) is not None
+
+
 def _version_tuple(text: Optional[str]) -> Optional[tuple[int, int, int]]:
     match = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", text or "")
     if not match:
@@ -102,7 +113,7 @@ def _skill_status(dest: Path) -> dict:
         "state": "missing",
         "installed_version": None,
         "packaged_version": version,
-        "legacy": legacy.exists() or legacy.is_symlink(),
+        "legacy": _is_legacy_deep_reach(legacy),
         "diff": [],
         "diff_count": 0,
     }
