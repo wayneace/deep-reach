@@ -20,7 +20,7 @@
 
 ## 状态
 
-- 版本 **0.14.1**；378 个单元测试。
+- 版本 **0.14.2**；384 个单元测试。
 - 21 个可见渠道，10 个有 P0 覆盖；8 个 default 渠道 live smoke 通过（P0/P1，未含 P3）。
 - `channels` / `doctor` 的 `status` 是**当前环境实测值**（`ready` / `degraded` / `fallback` / `needs_setup` / `needs_login` / `needs_key` / `experimental`）；`declared_status` 保留注册表声明。
 - 可读可写：写操作由动作声明决定；P3 bsk 可执行写操作，调用方需确认用户意图。
@@ -208,8 +208,8 @@ P2 搜索/阅读（按顺序降级，缺 key 自动跳过）：
 Skill 有两种安装方式，选一种：
 
 - **Cherry Studio / 有技能市场的客户端**：从市场安装
-  `https://github.com/wayneace/deep-reach/blob/main/deep_reach/data/skill/SKILL.md`。
-  市场安装的目录名是 `skill`，由市场负责更新。
+  `https://github.com/wayneace/deep-reach/blob/main/deep_reach/data/deep-reach/SKILL.md`。
+  市场安装的目录名是 `deep-reach`，由市场负责更新。
 - **Codex / Claude Code / 没有市场的客户端**：
 
   ```bash
@@ -218,7 +218,7 @@ Skill 有两种安装方式，选一种：
   deep-reach skill install --dest <skills-dir> --yes       # 其他
   ```
 
-  CLI 安装的目录名是 `deep-reach`。
+  CLI 安装的目录名也是 `deep-reach`。
 
 完整客户端矩阵和验证步骤见 [docs/install.md](docs/install.md)。不要两种方式同时装。
 
@@ -292,7 +292,7 @@ deep_reach/
   data/
     channels.yaml       # 精选渠道 + backend tier（随 wheel 打包）
     keys.example.yaml   # key 模板（随 wheel 打包）
-    skill/              # agent skill（随 wheel 打包）
+    deep-reach/         # agent skill（随 wheel 打包）
   product.py    # 产品承诺与分层
   cli.py        # deep-reach <channel> <action>
 ```

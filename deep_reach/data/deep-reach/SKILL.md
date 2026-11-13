@@ -10,7 +10,7 @@ description: |
   写操作仅在用户明确要求时执行；付费 API、Amazon 关键词量/流量数据不在范围内。
 metadata:
   homepage: https://github.com/wayneace/deep-reach
-  version: "0.14.1"
+  version: "0.14.2"
 ---
 
 # Deep-Reach
@@ -166,10 +166,10 @@ Agent 应该 branch `ok` 和 `error.code`，不要解析底层文本。`tier` �
 如果客户端有技能市场（marketplace，例如 Cherry Studio），优先从市场安装：
 
 ```text
-https://github.com/wayneace/deep-reach/blob/main/deep_reach/data/skill/SKILL.md
+https://github.com/wayneace/deep-reach/blob/main/deep_reach/data/deep-reach/SKILL.md
 ```
 
-市场安装的目录名是 `skill`，显示名是 `deep-reach`，由市场负责更新。
+市场安装的目录名是 `deep-reach`，显示名是 `deep-reach`，由市场负责更新。
 
 没有市场时再用 CLI 安装：
 

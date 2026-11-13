@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.14.2 — 2026-11-13
+
+Skill 安装目录与发布 tag 修复。
+
+- Skill 包内路径改为 `deep_reach/data/deep-reach/`；市场安装目录从通用的
+  `skill/` 变为 `deep-reach/`，不再与 bsk 的 bundled skill 冲突。
+- 从本版本起 release tag 使用裸 semver（`0.14.2`），避免 mise 返回
+  `v0.14.2` 后客户端再补一个 `v` 显示成 `vv0.14.2`。
+- 旧市场安装需要从新 URL 重装；CLI 安装路径不变。
+- 测试数更新为 384。
+
 ## v0.14.1 — 2026-11-12
 
 安装文档与分发路径。

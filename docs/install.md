@@ -19,7 +19,7 @@ P1（公开网页 / OpenCLI）还需要 OpenCLI 和 Chrome 扩展。
 | **Codex** | GitHub tag 安装 | `~/.agents/skills` 或 `.agents/skills` | npm |
 | **Claude Code** | GitHub tag 安装 | `~/.claude/skills` 或 `.claude/skills` | npm |
 | **其他客户端** | GitHub tag 安装 | `deep-reach skill install --dest <skills-dir>` | npm |
-| **源码开发** | `uv sync` | 仓库内 `deep_reach/data/skill/` | npm 或 `cli_install` |
+| **源码开发** | `uv sync` | 仓库内 `deep_reach/data/deep-reach/` | npm 或 `cli_install` |
 
 通用要求：
 
@@ -35,7 +35,7 @@ P1（公开网页 / OpenCLI）还需要 OpenCLI 和 Chrome 扩展。
 让 agent 调用 Cherry 的 CLI 管理器：
 
 ```text
-cli_install(name="deep-reach", tool="pipx:wayneace/deep-reach", requestedVersion="v0.14.1")
+cli_install(name="deep-reach", tool="pipx:wayneace/deep-reach", requestedVersion="0.14.2")
 ```
 
 没有 `cli_install` 工具时，用 Cherry 的 CLI 管理界面添加同一个 recipe 和版本。
@@ -45,11 +45,12 @@ cli_install(name="deep-reach", tool="pipx:wayneace/deep-reach", requestedVersion
 在 Cherry 的技能市场（marketplace）里搜索或粘贴：
 
 ```text
-https://github.com/wayneace/deep-reach/blob/main/deep_reach/data/skill/SKILL.md
+https://github.com/wayneace/deep-reach/blob/main/deep_reach/data/deep-reach/SKILL.md
 ```
 
-选择 `source_registry: github` 的结果安装。市场安装的目录名是 `skill`，
-显示名是 `deep-reach`，后续由市场负责检查更新。
+选择 `source_registry: github` 的结果安装。市场安装的目录名是 `deep-reach`，
+显示名是 `deep-reach`，后续由市场负责检查更新。旧版从 `skill` 目录安装的用户
+需要先卸载旧条目，再用上面的新 URL 重装。
 
 **不要再运行 `deep-reach skill install`**，否则会多装一份本地 skill。
 
@@ -82,7 +83,7 @@ deep-reach doctor
 ### 1. 安装 CLI
 
 ```bash
-uv tool install "git+https://github.com/wayneace/deep-reach@v0.14.1"
+uv tool install "git+https://github.com/wayneace/deep-reach@0.14.2"
 ```
 
 如果 `uv` 不存在，先安装 uv：
@@ -125,7 +126,7 @@ npm install -g @jackwener/opencli@2.0.3
 同 Codex：
 
 ```bash
-uv tool install "git+https://github.com/wayneace/deep-reach@v0.14.1"
+uv tool install "git+https://github.com/wayneace/deep-reach@0.14.2"
 ```
 
 ### 2. 安装 skill
@@ -155,7 +156,7 @@ npm install -g @jackwener/opencli@2.0.3
 ## 其他 agent 客户端
 
 ```bash
-uv tool install "git+https://github.com/wayneace/deep-reach@v0.14.1"
+uv tool install "git+https://github.com/wayneace/deep-reach@0.14.2"
 deep-reach skill install --dest <client skills directory> --yes
 ```
 
@@ -163,10 +164,10 @@ deep-reach skill install --dest <client skills directory> --yes
 如果客户端支持 GitHub skill 市场，也可以直接安装：
 
 ```text
-https://github.com/wayneace/deep-reach/blob/main/deep_reach/data/skill/SKILL.md
+https://github.com/wayneace/deep-reach/blob/main/deep_reach/data/deep-reach/SKILL.md
 ```
 
-市场安装的目录名是 `skill`；CLI 安装的目录名是 `deep-reach`。两种方式选一种，不要同时装。
+市场安装和 CLI 安装的目录名都是 `deep-reach`。两种方式选一种，不要同时装。
 
 ## 源码开发（只适用于仓库内）
 

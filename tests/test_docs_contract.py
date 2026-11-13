@@ -60,6 +60,10 @@ class DocsContractTest(unittest.TestCase):
         text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
         self.assertIn("v0.14.1", text)
 
+    def test_changelog_has_0142(self):
+        text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+        self.assertIn(f"## {__version__}", text)
+
 
 SKILL = ROOT / "deep_reach" / "data" / "deep-reach" / "SKILL.md"
 
@@ -112,6 +116,10 @@ class SkillContractTest(unittest.TestCase):
         ):
             self.assertIn(phrase, self.text)
 
+    def test_skill_install_url_names_unique_folder(self):
+        self.assertIn("deep_reach/data/deep-reach/SKILL.md", self.text)
+        self.assertNotIn("deep_reach/data/skill/SKILL.md", self.text)
+
 
 INSTALL = ROOT / "docs" / "install.md"
 
@@ -138,6 +146,16 @@ class InstallGuideTest(unittest.TestCase):
         lowered = self.text.lower()
         self.assertIn("pypi", lowered)
         self.assertIn("不要", lowered)
+
+    def test_install_docs_use_bare_release_tag(self):
+        self.assertIn(f'requestedVersion="{__version__}"', self.text)
+        self.assertIn(f"@{__version__}", self.text)
+        self.assertNotIn(f'requestedVersion="v{__version__}"', self.text)
+        self.assertNotIn(f"@v{__version__}", self.text)
+
+    def test_install_docs_use_unique_skill_folder(self):
+        self.assertIn("deep_reach/data/deep-reach/SKILL.md", self.text)
+        self.assertNotIn("deep_reach/data/skill/SKILL.md", self.text)
 
 
 if __name__ == "__main__":
