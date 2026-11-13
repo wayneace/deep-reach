@@ -15,7 +15,7 @@ from .result import BAD_INPUT, CONFIG_ERROR, ReachError
 
 SKILL_NAME = "deep-reach"
 SKILL_PACKAGE = "deep_reach.data"
-SKILL_REL = "skill"
+SKILL_REL = "deep-reach"
 
 
 def skill_dir() -> Path:

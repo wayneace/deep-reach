@@ -20,8 +20,8 @@ import yaml
 EXPECTED_VISIBLE = 21
 REGISTRY_SUFFIX = "deep_reach/data/channels.yaml"
 KEYS_TEMPLATE_SUFFIX = "deep_reach/data/keys.example.yaml"
-SKILL_SUFFIX = "deep_reach/data/skill/SKILL.md"
-SKILL_CAPS_SUFFIX = "deep_reach/data/skill/references/capabilities.md"
+SKILL_SUFFIX = "deep_reach/data/deep-reach/SKILL.md"
+SKILL_CAPS_SUFFIX = "deep_reach/data/deep-reach/references/capabilities.md"
 
 
 def main() -> int:

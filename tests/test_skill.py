@@ -51,6 +51,11 @@ def _set_version(target: Path, version: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
+class PackagedSkillTest(unittest.TestCase):
+    def test_packaged_skill_dir_uses_unique_name(self):
+        self.assertEqual(skill_dir().name, "deep-reach")
+
+
 class SkillStatusTest(unittest.TestCase):
     def test_missing(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -252,6 +257,17 @@ class SkillInstallTest(unittest.TestCase):
             apply_install(build_install_plan(dest))
             self.assertEqual((dest / "other" / "keep.txt").read_text(), "keep")
 
+    def test_apply_preserves_existing_skill_sibling(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = Path(tmp)
+            sibling = dest / "skill"
+            sibling.mkdir()
+            marker = sibling / "SKILL.md"
+            marker.write_text("bsk", encoding="utf-8")
+            apply_install(build_install_plan(dest))
+            self.assertEqual(marker.read_text(encoding="utf-8"), "bsk")
+            self.assertTrue((dest / "deep-reach" / "SKILL.md").is_file())
+
     def test_apply_replaces_and_removes_stale_files(self):
         with tempfile.TemporaryDirectory() as tmp:
             dest = Path(tmp)
@@ -330,7 +346,7 @@ class SkillCliTest(unittest.TestCase):
         self.assertEqual(code, 0)
         data = json.loads(out)
         self.assertTrue(data["ok"])
-        self.assertEqual(Path(data["path"]).name, "skill")
+        self.assertEqual(Path(data["path"]).name, "deep-reach")
 
     def test_show_text(self):
         code, out = _run("skill", "show")

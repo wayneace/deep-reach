@@ -11,8 +11,8 @@ DOCS = (
     "CONTRIBUTING.md",
     "pyproject.toml",
     "docs/install.md",
-    "deep_reach/data/skill/SKILL.md",
-    "deep_reach/data/skill/references/capabilities.md",
+    "deep_reach/data/deep-reach/SKILL.md",
+    "deep_reach/data/deep-reach/references/capabilities.md",
     "deep_reach/product.py",
 )
 BANNED = (
@@ -61,7 +61,7 @@ class DocsContractTest(unittest.TestCase):
         self.assertIn("v0.14.1", text)
 
 
-SKILL = ROOT / "deep_reach" / "data" / "skill" / "SKILL.md"
+SKILL = ROOT / "deep_reach" / "data" / "deep-reach" / "SKILL.md"
 
 
 class SkillContractTest(unittest.TestCase):

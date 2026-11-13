@@ -48,7 +48,7 @@ deep-reach = "deep_reach.cli:main"
 include = ["deep_reach*"]
 
 [tool.setuptools.package-data]
-"deep_reach.data" = ["*.yaml", "skill/*.md", "skill/references/*.md"]
+"deep_reach.data" = ["*.yaml", "deep-reach/*.md", "deep-reach/references/*.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
